@@ -1,0 +1,32 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: oneterm-backend
+    environment:
+      - TZ=Asia/Shanghai
+      - SERVER_PORT=8789
+      - ONETERM_MOCK=${ONETERM_MOCK:-true}
+      - ONETERM_SECRET_KEY=${ONETERM_SECRET_KEY:-change-me-in-prod-aes256-secret-key}
+      - ONETERM_ADMIN_USERNAME=${ONETERM_ADMIN_USERNAME:-admin}
+      - ONETERM_ADMIN_PASSWORD=${ONETERM_ADMIN_PASSWORD:-Admin@123456}
+      - ONETERM_DB_PATH=/app/data/oneterm.db
+    volumes:
+      - oneterm-data:/app/data
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: oneterm-web
+    ports:
+      - "8789:80"
+      - "8443:443"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  oneterm-data:

@@ -1,0 +1,17 @@
+FROM eclipse-temurin:21-jdk-alpine AS builder
+WORKDIR /workspace/backend
+COPY backend/pom.xml .
+COPY backend/src ./src
+COPY docs /workspace/docs
+RUN apk add --no-cache maven && mvn -B package -DskipTests
+
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app/backend
+ENV TZ=Asia/Shanghai
+ENV SERVER_PORT=8789
+ENV ONETERM_DB_PATH=/app/data/oneterm.db
+COPY --from=builder /workspace/backend/target/oneterm-backend-0.1.0-SNAPSHOT.jar /app/backend/app.jar
+COPY docs /app/docs
+VOLUME ["/app/data"]
+EXPOSE 8789
+ENTRYPOINT ["java", "-jar", "/app/backend/app.jar"]
