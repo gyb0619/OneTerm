@@ -1,11 +1,17 @@
 package com.oneterm.qa;
 
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.util.List;
 
 /**
  * 教务 RAG 问答控制器（严格对应 OpenAPI /api/qa/** 契约）。
@@ -41,5 +47,32 @@ public class QaController {
     )
     public SseEmitter askStream(@RequestBody(required = false) QaAskRequest request) {
         return qaService.streamAskForCurrentUser(request);
+    }
+
+    /**
+     * GET /api/qa/history
+     * 获取当前用户的问答历史记录（按时间倒序排列）。
+     */
+    @GetMapping("/history")
+    public List<QaHistoryDto> getHistory(@RequestParam(defaultValue = "50") int limit) {
+        return qaService.getHistoryForCurrentUser(limit);
+    }
+
+    /**
+     * DELETE /api/qa/history/{id}
+     * 删除指定单条问答历史记录。
+     */
+    @DeleteMapping("/history/{id}")
+    public void deleteHistoryItem(@PathVariable long id) {
+        qaService.deleteHistoryItemForCurrentUser(id);
+    }
+
+    /**
+     * DELETE /api/qa/history
+     * 清空当前用户的全部问答历史记录。
+     */
+    @DeleteMapping("/history")
+    public void clearHistory() {
+        qaService.clearHistoryForCurrentUser();
     }
 }

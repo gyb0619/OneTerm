@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -69,6 +71,7 @@ class QaServiceIntegrationTest {
             mockLlmGateway.setEmbeddingEnabled(true);
         }
 
+        jdbcTemplate.update("DELETE FROM qa_history WHERE user_id IN (?, ?)", USER_A_ID, USER_B_ID);
         jdbcTemplate.update("DELETE FROM chunks WHERE user_id IN (?, ?)", USER_A_ID, USER_B_ID);
         jdbcTemplate.update("DELETE FROM events WHERE user_id IN (?, ?)", USER_A_ID, USER_B_ID);
         jdbcTemplate.update("DELETE FROM users WHERE id IN (?, ?)", USER_A_ID, USER_B_ID);
@@ -226,6 +229,56 @@ class QaServiceIntegrationTest {
             assertFalse(text.contains("量子密码学"), "用户 A 绝不能检索到用户 B 的原文切片");
             assertFalse(title.contains("量子密码学"), "用户 A 绝不能检索到用户 B 的事件标题");
         }
+    }
+
+    @Test
+    void shouldPersistAndManageQaHistory() throws Exception {
+        authenticateAs(USER_A_ID, "qa_test_user_a");
+        qaService.indexEventsForCurrentUser();
+
+        // 1. 发起一次提问并完成 SSE 流式生成
+        mockMvc.perform(post("/api/qa/ask/stream")
+                        .characterEncoding(StandardCharsets.UTF_8)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"question\":\"下周三上午有什么课？\"}"))
+                .andExpect(status().isOk());
+
+        // 2. 查询历史记录 GET /api/qa/history
+        MvcResult historyResult = mockMvc.perform(get("/api/qa/history"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode historyArray = objectMapper.readTree(historyResult.getResponse().getContentAsString(StandardCharsets.UTF_8));
+        assertTrue(historyArray.isArray());
+        assertEquals(1, historyArray.size());
+        JsonNode first = historyArray.get(0);
+        assertEquals("下周三上午有什么课？", first.get("question").asText());
+        assertFalse(first.get("answer").asText().isBlank());
+        assertTrue(first.get("citations").isArray());
+        long historyId = first.get("id").asLong();
+
+        // 3. 验证用户 B 无法查看到用户 A 的历史记录（多租户隔离）
+        authenticateAs(USER_B_ID, "qa_test_user_b");
+        MvcResult userBHistory = mockMvc.perform(get("/api/qa/history"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode userBArray = objectMapper.readTree(userBHistory.getResponse().getContentAsString(StandardCharsets.UTF_8));
+        assertEquals(0, userBArray.size());
+
+        // 用户 B 尝试删除用户 A 的记录应失败（404）
+        assertThrows(BusinessException.class, () -> qaService.deleteHistoryItemForCurrentUser(historyId));
+
+        // 4. 用户 A 删除单条记录
+        authenticateAs(USER_A_ID, "qa_test_user_a");
+        mockMvc.perform(delete("/api/qa/history/" + historyId))
+                .andExpect(status().isOk());
+
+        // 验证已删除
+        MvcResult afterDeleteResult = mockMvc.perform(get("/api/qa/history"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode afterDeleteArray = objectMapper.readTree(afterDeleteResult.getResponse().getContentAsString(StandardCharsets.UTF_8));
+        assertEquals(0, afterDeleteArray.size());
     }
 
     private void authenticateAs(long userId, String username) {

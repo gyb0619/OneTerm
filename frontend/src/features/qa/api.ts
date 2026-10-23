@@ -14,6 +14,15 @@ export interface QaAskDoneResult {
   citations: QaCitationDto[];
 }
 
+export interface QaHistoryItem {
+  id: number;
+  question: string;
+  answer: string;
+  retrievalMode: RetrievalMode;
+  citations: QaCitationDto[];
+  createdAt: string;
+}
+
 export const QUICK_QUESTIONS: readonly string[] = [
   '下周三有空吗？',
   '期末前哪几门最紧？',
@@ -25,4 +34,25 @@ export const QUICK_QUESTIONS: readonly string[] = [
  */
 export async function rebuildQaIndex(): Promise<QaIndexResponse> {
   return httpClient.post<QaIndexResponse>('/api/qa/index');
+}
+
+/**
+ * 获取当前用户的问答历史记录
+ */
+export async function fetchQaHistory(limit = 50): Promise<QaHistoryItem[]> {
+  return httpClient.get<QaHistoryItem[]>(`/api/qa/history?limit=${limit}`);
+}
+
+/**
+ * 删除单条问答历史记录
+ */
+export async function deleteQaHistoryItem(id: number): Promise<void> {
+  return httpClient.delete<void>(`/api/qa/history/${id}`);
+}
+
+/**
+ * 清空当前用户的问答历史记录
+ */
+export async function clearQaHistory(): Promise<void> {
+  return httpClient.delete<void>('/api/qa/history');
 }

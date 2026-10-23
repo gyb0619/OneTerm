@@ -1,5 +1,7 @@
 package com.oneterm.qa;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oneterm.common.BusinessException;
 import com.oneterm.common.CurrentUserProvider;
 import com.oneterm.common.ErrorCode;
@@ -25,12 +27,15 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * 教务 RAG 问答核心业务服务。
- * 强制执行 user_id 租户隔离，负责事件原文切片入库、向量/BM25 混合降级检索与流式问答生成。
+ * 强制执行 user_id 租户隔离，负责事件原文切片入库、向量/BM25 混合降级检索、问答持久化与流式生成。
  */
 @Service
 public class QaService {
@@ -42,18 +47,21 @@ public class QaService {
     private final LlmGateway llmGateway;
     private final CurrentUserProvider currentUserProvider;
     private final SseEventPublisher sseEventPublisher;
+    private final ObjectMapper objectMapper;
     private final String promptTemplate;
 
     public QaService(
             JdbcTemplate jdbcTemplate,
             LlmGateway llmGateway,
             CurrentUserProvider currentUserProvider,
-            SseEventPublisher sseEventPublisher
+            SseEventPublisher sseEventPublisher,
+            ObjectMapper objectMapper
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.llmGateway = llmGateway;
         this.currentUserProvider = currentUserProvider;
         this.sseEventPublisher = sseEventPublisher;
+        this.objectMapper = objectMapper;
         this.promptTemplate = loadPromptTemplate();
     }
 
@@ -174,6 +182,10 @@ public class QaService {
                             retrievalResult.mode(),
                             citations
                     );
+
+                    // 问答历史自动持久化存储
+                    saveQaHistory(userId, question, result.content(), retrievalResult.mode(), citations);
+
                     sseEventPublisher.sendDone(
                             emitter,
                             askResult,
@@ -189,6 +201,100 @@ public class QaService {
             });
         } catch (Throwable ex) {
             handleStreamError(emitter, ex);
+        }
+    }
+
+    /**
+     * 将问答记录写入 qa_history 表（严格租户隔离 user_id）。
+     */
+    public void saveQaHistory(
+            long userId,
+            String question,
+            String answer,
+            String retrievalMode,
+            List<QaCitationDto> citations
+    ) {
+        try {
+            String citationsJson = citations != null ? objectMapper.writeValueAsString(citations) : "[]";
+            String now = ZonedDateTime.now(ZoneId.of("Asia/Shanghai"))
+                    .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+            jdbcTemplate.update(
+                    """
+                    INSERT INTO qa_history (user_id, question, answer, retrieval_mode, citations, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    userId,
+                    question,
+                    answer,
+                    retrievalMode != null ? retrievalMode : "bm25",
+                    citationsJson,
+                    now
+            );
+        } catch (Exception ignored) {
+            // 避免日志序列化异常阻塞 SSE 结束
+        }
+    }
+
+    /**
+     * 查询当前用户的问答历史列表（按创建时间倒序）。
+     */
+    public List<QaHistoryDto> getHistoryForCurrentUser(int limit) {
+        long userId = currentUserProvider.requireCurrentUserId();
+        int safeLimit = Math.max(1, Math.min(limit, 100));
+        return jdbcTemplate.query(
+                """
+                SELECT id, question, answer, retrieval_mode, citations, created_at
+                FROM qa_history
+                WHERE user_id = ?
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (rs, rowNum) -> {
+                    long id = rs.getLong("id");
+                    String q = rs.getString("question");
+                    String a = rs.getString("answer");
+                    String mode = rs.getString("retrieval_mode");
+                    String citationsJson = rs.getString("citations");
+                    String createdAt = rs.getString("created_at");
+                    List<QaCitationDto> parsedCitations = parseCitations(citationsJson);
+                    return new QaHistoryDto(id, q, a, mode, parsedCitations, createdAt);
+                },
+                userId,
+                safeLimit
+        );
+    }
+
+    /**
+     * 删除当前用户的某条历史问答记录。
+     */
+    public void deleteHistoryItemForCurrentUser(long id) {
+        long userId = currentUserProvider.requireCurrentUserId();
+        int affected = jdbcTemplate.update(
+                "DELETE FROM qa_history WHERE id = ? AND user_id = ?",
+                id,
+                userId
+        );
+        if (affected == 0) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "历史问答记录不存在或无权操作");
+        }
+    }
+
+    /**
+     * 清空当前用户的全部历史问答记录。
+     */
+    public void clearHistoryForCurrentUser() {
+        long userId = currentUserProvider.requireCurrentUserId();
+        jdbcTemplate.update("DELETE FROM qa_history WHERE user_id = ?", userId);
+    }
+
+    private List<QaCitationDto> parseCitations(String json) {
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<QaCitationDto>>() {});
+        } catch (Exception e) {
+            return List.of();
         }
     }
 
