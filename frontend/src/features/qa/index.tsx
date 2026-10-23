@@ -8,6 +8,7 @@ import {
   History,
   Loader2,
   MessageSquareText,
+  Plus,
   RotateCcw,
   Send,
   Sparkles,
@@ -22,6 +23,7 @@ import { useSseStream } from '../../shared/hooks/useSseStream';
 import type { ApiError, QaCitationDto } from '../../shared/types/api';
 import {
   QUICK_QUESTIONS,
+  QUICK_QUESTION_GROUPS,
   rebuildQaIndex,
   fetchQaHistory,
   deleteQaHistoryItem,
@@ -223,6 +225,13 @@ export const QaPage: React.FC = () => {
     }
   }, [indexing, streaming]);
 
+  // 新开会话：清空当前视口，保留数据库历史
+  const handleNewConversation = useCallback(() => {
+    if (streaming) return;
+    setTurns([]);
+    setQuestionInput('');
+  }, [streaming]);
+
   const askQuestion = useCallback(
     async (rawQuestion: string) => {
       const q = rawQuestion.trim();
@@ -378,6 +387,18 @@ export const QaPage: React.FC = () => {
             </span>
           )}
 
+          {/* 新开会话按钮 */}
+          <button
+            type="button"
+            onClick={handleNewConversation}
+            disabled={streaming}
+            className="btn-secondary py-1 px-2.5 text-xs text-teal-700 bg-teal-50/70 hover:bg-teal-100/70 border-teal-200/80 flex items-center gap-1.5 transition"
+            title="开启全新提问对话（历史记录可在侧边栏查看）"
+          >
+            <Plus className="w-3.5 h-3.5 text-teal-600" />
+            <span>新会话</span>
+          </button>
+
           <button
             type="button"
             onClick={handleRebuildIndex}
@@ -518,29 +539,40 @@ export const QaPage: React.FC = () => {
       {/* 对话列表区 */}
       <div className="space-y-4 min-h-[380px]">
         {turns.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-8 text-center space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 text-center space-y-5">
             <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto">
               <Sparkles className="w-6 h-6" />
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-800">关于学期日程，随时提问</h2>
               <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-                可询问具体课程安排、时间冲突排查、考试截止日期以及考前复习建议
+                基于已录入课表与通知进行智能问答，可查询课程安排、冲突排查、考试截止与复习建议
               </p>
             </div>
 
-            <div className="pt-2 flex flex-wrap justify-center gap-2 max-w-lg mx-auto">
-              {QUICK_QUESTIONS.map((q) => (
-                <button
-                  key={q}
-                  type="button"
-                  onClick={() => void askQuestion(q)}
-                  disabled={streaming}
-                  className="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-teal-50/80 border border-slate-200 hover:border-teal-300 text-xs text-slate-700 hover:text-teal-900 transition text-left flex items-center gap-1.5"
-                >
-                  <span>{q}</span>
-                  <ChevronRight className="w-3 h-3 text-slate-400" />
-                </button>
+            {/* 分组式建议提问 */}
+            <div className="pt-2 space-y-4 max-w-2xl mx-auto text-left">
+              {QUICK_QUESTION_GROUPS.map((group) => (
+                <div key={group.tag} className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 px-1 text-[11px] font-semibold text-slate-500">
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
+                    <span>{group.tag}</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {group.questions.map((q) => (
+                      <button
+                        key={q}
+                        type="button"
+                        onClick={() => void askQuestion(q)}
+                        disabled={streaming}
+                        className="p-2.5 rounded-xl bg-slate-50/80 hover:bg-teal-50/80 border border-slate-200/80 hover:border-teal-300 text-xs text-slate-700 hover:text-teal-900 transition text-left flex items-center justify-between group shadow-2xs"
+                      >
+                        <span className="truncate pr-2">{q}</span>
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-teal-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
@@ -638,6 +670,24 @@ export const QaPage: React.FC = () => {
         )}
         <div ref={turnsEndRef} />
       </div>
+
+      {/* 底部追问快捷气泡（对话进行中时提供） */}
+      {turns.length > 0 && (
+        <div className="flex items-center gap-1.5 overflow-x-auto py-1 px-1 scrollbar-none text-[11px]">
+          <span className="text-slate-400 shrink-0 text-[10px] mr-1">快捷提问:</span>
+          {QUICK_QUESTIONS.slice(0, 6).map((q) => (
+            <button
+              key={q}
+              type="button"
+              onClick={() => void askQuestion(q)}
+              disabled={streaming}
+              className="shrink-0 px-2.5 py-1 rounded-full bg-white hover:bg-teal-50 border border-slate-200/80 hover:border-teal-300 text-slate-600 hover:text-teal-900 transition text-[11px] shadow-2xs"
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 底部输入框 */}
       <form
