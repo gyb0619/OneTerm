@@ -1,9 +1,12 @@
 package com.oneterm.calendar;
 
+import com.oneterm.calendar.dto.BatchCreateReviewTopicsRequest;
 import com.oneterm.calendar.dto.CalendarOverviewResponse;
 import com.oneterm.calendar.dto.CreateReviewTopicRequest;
 import com.oneterm.calendar.dto.ReviewTopicDto;
 import com.oneterm.calendar.dto.ScheduleReviewTopicsRequest;
+import com.oneterm.calendar.dto.SuggestCourseTopicsRequest;
+import com.oneterm.calendar.dto.SuggestCourseTopicsResponse;
 import com.oneterm.calendar.dto.UpdateReviewTopicRequest;
 import com.oneterm.common.BusinessException;
 import com.oneterm.common.CurrentUser;
@@ -188,6 +191,36 @@ class CalendarServiceTest {
         assertNotNull(checkUserA);
         assertFalse(checkUserA.isEmpty());
         assertEquals("冒泡排序", checkUserA.get(0).topic());
+    }
+
+    @Test
+    @DisplayName("智能提炼单科考点大纲与批量导入自动倒排测试")
+    void shouldSuggestCourseTopicsAndBatchCreate() {
+        activeUserId.set(201L);
+        jdbcTemplate.update(
+                """
+                INSERT INTO events (id, user_id, type, title, start_time, end_time, location, course_name, source_text)
+                VALUES (20, 201, 'exam', '《计算机网络》期末统考', '2026-11-13T09:00:00+08:00', '2026-11-13T11:00:00+08:00', 'A105', '计算机网络', '考查TCP三次握手与滑动窗口')
+                """
+        );
+
+        // 1. 针对计算机网络课程提炼考点细点大纲
+        SuggestCourseTopicsResponse suggested = calendarController.suggestCourseTopics(
+                new SuggestCourseTopicsRequest(20L, "计算机网络")
+        ).getBody();
+        assertNotNull(suggested);
+        assertEquals("计算机网络", suggested.courseName());
+        assertTrue(suggested.topics().size() >= 5);
+        assertTrue(suggested.topics().stream().anyMatch(t -> t.contains("TCP") || t.contains("握手") || t.contains("窗口")));
+
+        // 2. 用户同意后批量导入并自动倒排
+        List<ReviewTopicDto> batchCreated = calendarController.batchCreateReviewTopics(
+                new BatchCreateReviewTopicsRequest(20L, List.of("TCP三次握手与四次挥手", "滑动窗口流量控制", "IP数据报分片"), true)
+        ).getBody();
+        assertNotNull(batchCreated);
+        assertTrue(batchCreated.size() >= 3);
+        // 验证自动生成了计划复习日期且早于考试日期 2026-11-13
+        assertTrue(batchCreated.stream().allMatch(t -> t.plannedDate() != null && t.plannedDate().compareTo("2026-11-13") < 0));
     }
 
     private static Path resolveMigrationPath() {

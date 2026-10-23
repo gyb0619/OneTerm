@@ -1,10 +1,13 @@
 package com.oneterm.calendar;
 
+import com.oneterm.calendar.dto.BatchCreateReviewTopicsRequest;
 import com.oneterm.calendar.dto.CalendarOverviewResponse;
 import com.oneterm.calendar.dto.ConflictPairDto;
 import com.oneterm.calendar.dto.CreateReviewTopicRequest;
 import com.oneterm.calendar.dto.ReviewTopicDto;
 import com.oneterm.calendar.dto.ScheduleReviewTopicsRequest;
+import com.oneterm.calendar.dto.SuggestCourseTopicsRequest;
+import com.oneterm.calendar.dto.SuggestCourseTopicsResponse;
 import com.oneterm.calendar.dto.UpdateReviewTopicRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -67,6 +70,20 @@ public class CalendarController {
     ) {
         ReviewTopicDto created = calendarService.createReviewTopic(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PostMapping("/courses/suggest-topics")
+    public ResponseEntity<SuggestCourseTopicsResponse> suggestCourseTopics(
+            @RequestBody(required = false) SuggestCourseTopicsRequest request
+    ) {
+        return ResponseEntity.ok(calendarService.suggestCourseTopics(request));
+    }
+
+    @PostMapping("/review-topics/batch")
+    public ResponseEntity<List<ReviewTopicDto>> batchCreateReviewTopics(
+            @RequestBody BatchCreateReviewTopicsRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(calendarService.batchCreateReviewTopics(request));
     }
 
     @PostMapping("/review-topics/schedule")

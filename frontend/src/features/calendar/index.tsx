@@ -207,6 +207,25 @@ export const CalendarPage: React.FC = () => {
     }
   };
 
+  const handleBatchAddTopics = async (
+    eventId: number,
+    topics: string[],
+    autoSchedule = true
+  ) => {
+    try {
+      await calendarApi.batchCreateReviewTopics({
+        eventId,
+        topics,
+        autoSchedule,
+      });
+      await fetchOverview(true);
+      showToast(`已成功导入 ${topics.length} 个考点细点并完成智能考前倒排！`);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : '批量导入复习考点失败');
+      throw err;
+    }
+  };
+
   const handleExportIcs = async () => {
     setExporting(true);
     try {
@@ -478,6 +497,7 @@ export const CalendarPage: React.FC = () => {
                 reviewTopics={overview.reviewTopics}
                 scheduling={scheduling}
                 onAddTopic={handleAddTopic}
+                onBatchAddTopics={handleBatchAddTopics}
                 onScheduleAll={handleScheduleAll}
                 onUpdateTopic={handleUpdateTopic}
                 onDeleteTopic={handleDeleteTopic}

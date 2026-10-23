@@ -18,6 +18,23 @@ export interface UpdateReviewTopicPayload {
   done?: boolean;
 }
 
+export interface SuggestCourseTopicsPayload {
+  eventId?: number;
+  courseName?: string;
+}
+
+export interface SuggestCourseTopicsResponse {
+  eventId?: number;
+  courseName: string;
+  topics: string[];
+}
+
+export interface BatchCreateReviewTopicsPayload {
+  eventId: number;
+  topics: string[];
+  autoSchedule?: boolean;
+}
+
 export const calendarApi = {
   getOverview: (semesterStart?: string, semesterEnd?: string) => {
     const params = new URLSearchParams();
@@ -38,6 +55,12 @@ export const calendarApi = {
 
   createReviewTopic: (payload: CreateReviewTopicPayload) =>
     httpClient.post<ReviewTopicDto>('/api/calendar/review-topics', payload),
+
+  batchCreateReviewTopics: (payload: BatchCreateReviewTopicsPayload) =>
+    httpClient.post<ReviewTopicDto[]>('/api/calendar/review-topics/batch', payload),
+
+  suggestCourseTopics: (payload: SuggestCourseTopicsPayload) =>
+    httpClient.post<SuggestCourseTopicsResponse>('/api/calendar/courses/suggest-topics', payload),
 
   scheduleReviewTopics: (startDate?: string) =>
     httpClient.post<ReviewTopicDto[]>(
@@ -62,9 +85,9 @@ export const calendarApi = {
     link.download = 'oneterm-calendar.ics';
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    link.remove();
     URL.revokeObjectURL(url);
   },
 
-  loadDemoData: () => httpClient.post<UserProfileResponse>('/api/auth/demo-load', {}),
+  loadDemoData: () => httpClient.post<UserProfileResponse>('/api/auth/demo-load'),
 };
