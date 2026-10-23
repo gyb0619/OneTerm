@@ -250,4 +250,24 @@ class AdminAndQuotaGatewayTest {
             System.clearProperty("DEEPSEEK_API");
         }
     }
+
+    @Test
+    void testAdminUsersAndUsageLogsAndFavicon() throws Exception {
+        // 1. 管理员查询用户列表，验证无死锁且今日用量正常计算
+        mockMvc.perform(get("/api/admin/users").session(adminSession))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].username").value("admin"))
+                .andExpect(jsonPath("$[0].todayTokensUsed").isNumber());
+
+        // 2. 管理员查询用量明细
+        mockMvc.perform(get("/api/admin/usage-logs").session(adminSession))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+
+        // 3. favicon.ico 正常响应 SVG
+        mockMvc.perform(get("/favicon.ico"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith("image/svg+xml"));
+    }
 }

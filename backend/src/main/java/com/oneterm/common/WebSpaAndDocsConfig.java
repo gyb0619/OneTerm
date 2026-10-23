@@ -60,6 +60,19 @@ public class WebSpaAndDocsConfig implements WebMvcConfigurer {
             return ResponseEntity.ok(OFFLINE_SWAGGER_UI_HTML);
         }
 
+        @GetMapping(value = "/favicon.ico", produces = "image/svg+xml")
+        public ResponseEntity<String> favicon() {
+            return ResponseEntity.ok(
+                    """
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                      <rect width="100" height="100" rx="20" fill="#0f766e"/>
+                      <path d="M28 20v14M72 20v14M20 38h60M25 28h50a5 5 0 0 1 5 5v45a5 5 0 0 1-5 5H25a5 5 0 0 1-5-5V33a5 5 0 0 1 5-5z" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                      <circle cx="50" cy="58" r="7" fill="#ccfbf1"/>
+                    </svg>
+                    """
+            );
+        }
+
         @GetMapping(value = {"/", "/login", "/extract", "/calendar", "/qa", "/visualize", "/admin"}, produces = MediaType.TEXT_HTML_VALUE)
         public ResponseEntity<Resource> serveSpaIndex() {
             Path[] candidates = {

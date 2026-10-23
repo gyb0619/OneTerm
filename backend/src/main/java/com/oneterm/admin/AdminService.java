@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.PreparedStatement;
 import java.sql.Statement;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -54,13 +55,22 @@ public class AdminService {
     }
 
     public List<AdminUserDto> listUsers() {
+        String todayDate = LocalDate.now(SHANGHAI_ZONE).toString();
+        String sql = """
+                SELECT u.id, u.username, u.role, u.enabled, u.daily_token_limit, u.failed_count, u.locked_until, u.preferred_model_id,
+                       COALESCE(SUM(l.prompt_tokens + l.completion_tokens), 0) AS today_used
+                FROM users u
+                LEFT JOIN usage_log l ON l.user_id = u.id AND substr(l.created_at, 1, 10) = ?
+                GROUP BY u.id
+                ORDER BY u.id ASC
+                """;
         return jdbcTemplate.query(
-                "SELECT id, username, role, enabled, daily_token_limit, failed_count, locked_until, preferred_model_id FROM users ORDER BY id ASC",
+                sql,
                 (rs, rowNum) -> {
                     long id = rs.getLong("id");
                     long prefId = rs.getLong("preferred_model_id");
                     Long preferredModelId = rs.wasNull() ? null : prefId;
-                    int todayUsed = routingLlmGateway.getTodayTokensUsed(id);
+                    int todayUsed = rs.getInt("today_used");
                     return new AdminUserDto(
                             id,
                             rs.getString("username"),
@@ -72,7 +82,8 @@ public class AdminService {
                             rs.getString("locked_until"),
                             preferredModelId
                     );
-                }
+                },
+                todayDate
         );
     }
 
@@ -351,13 +362,22 @@ public class AdminService {
     }
 
     private AdminUserDto getUserByIdOrThrow(long id) {
+        String todayDate = LocalDate.now(SHANGHAI_ZONE).toString();
+        String sql = """
+                SELECT u.id, u.username, u.role, u.enabled, u.daily_token_limit, u.failed_count, u.locked_until, u.preferred_model_id,
+                       COALESCE(SUM(l.prompt_tokens + l.completion_tokens), 0) AS today_used
+                FROM users u
+                LEFT JOIN usage_log l ON l.user_id = u.id AND substr(l.created_at, 1, 10) = ?
+                WHERE u.id = ?
+                GROUP BY u.id
+                """;
         List<AdminUserDto> rows = jdbcTemplate.query(
-                "SELECT id, username, role, enabled, daily_token_limit, failed_count, locked_until, preferred_model_id FROM users WHERE id = ?",
+                sql,
                 (rs, rowNum) -> {
                     long uid = rs.getLong("id");
                     long prefId = rs.getLong("preferred_model_id");
                     Long preferredModelId = rs.wasNull() ? null : prefId;
-                    int todayUsed = routingLlmGateway.getTodayTokensUsed(uid);
+                    int todayUsed = rs.getInt("today_used");
                     return new AdminUserDto(
                             uid,
                             rs.getString("username"),
@@ -370,6 +390,7 @@ public class AdminService {
                             preferredModelId
                     );
                 },
+                todayDate,
                 id
         );
         if (rows.isEmpty()) {
