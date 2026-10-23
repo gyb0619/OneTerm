@@ -177,7 +177,7 @@ public class AdminService {
     }
 
     public List<LlmConfigDto> listLlmConfigs() {
-        return jdbcTemplate.query(
+        List<LlmConfigDto> list = new java.util.ArrayList<>(jdbcTemplate.query(
                 "SELECT id, role, name, base_url, model, api_key_encrypted, enabled, updated_at FROM llm_config ORDER BY id ASC",
                 (rs, rowNum) -> new LlmConfigDto(
                         rs.getLong("id"),
@@ -189,7 +189,20 @@ public class AdminService {
                         rs.getInt("enabled") == 1,
                         rs.getString("updated_at")
                 )
-        );
+        ));
+        for (RoutingLlmGateway.EnvModelInfo envModel : routingLlmGateway.getAllEnvModels()) {
+            list.add(new LlmConfigDto(
+                    envModel.id(),
+                    envModel.role(),
+                    envModel.name(),
+                    envModel.baseUrl(),
+                    envModel.model(),
+                    envModel.apiKeyMasked(),
+                    true,
+                    "系统环境变量"
+            ));
+        }
+        return list;
     }
 
     @Transactional
@@ -222,6 +235,9 @@ public class AdminService {
 
     @Transactional
     public LlmConfigDto updateLlmConfig(long id, SaveLlmConfigRequest request) {
+        if (id < 0) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "系统环境变量模型由系统环境自动管理，无法直接在此修改");
+        }
         validateLlmConfigRequest(request, false);
         List<String> existingKeys = jdbcTemplate.query(
                 "SELECT api_key_encrypted FROM llm_config WHERE id = ?",
@@ -265,6 +281,9 @@ public class AdminService {
 
     @Transactional
     public void deleteLlmConfig(long id) {
+        if (id < 0) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "系统环境变量模型由系统环境自动管理，无法直接删除");
+        }
         getLlmConfigByIdOrThrow(id);
         jdbcTemplate.update("UPDATE users SET preferred_model_id = NULL WHERE preferred_model_id = ?", id);
         jdbcTemplate.update("DELETE FROM llm_config WHERE id = ?", id);

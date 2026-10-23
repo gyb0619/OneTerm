@@ -362,7 +362,9 @@ export const AuthPage: React.FC = () => {
                       disabled={switchingModel}
                       onChange={(e) => {
                         const val = Number(e.target.value);
-                        if (val) handleSelectModel(val);
+                        if (!isNaN(val) && val !== 0) {
+                          handleSelectModel(val);
+                        }
                       }}
                       className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
                     >

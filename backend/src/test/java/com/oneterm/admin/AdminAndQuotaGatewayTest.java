@@ -222,4 +222,32 @@ class AdminAndQuotaGatewayTest {
                 .andExpect(jsonPath("$[0].userId").value(userId))
                 .andExpect(jsonPath("$[0].kind").value("qa"));
     }
+
+    @Test
+    void testDualSupportEnvModelDetectionAndSelection() throws Exception {
+        System.setProperty("DEEPSEEK_API", "sk-deepseek-env-sample-key-1234");
+        try {
+            // 1. 用户可选模型列表中包含系统环境变量模型
+            mockMvc.perform(get("/api/auth/models").session(adminSession))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[?(@.id == -1)].name").value("DeepSeek (系统环境变量)"))
+                    .andExpect(jsonPath("$[?(@.id == -1)].model").value("deepseek-chat"));
+
+            // 2. 管理员模型配置列表中包含该环境变量配置，且仅展示脱敏尾号
+            mockMvc.perform(get("/api/admin/llm-configs").session(adminSession))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[?(@.id == -1)].name").value("DeepSeek (系统环境变量)"))
+                    .andExpect(jsonPath("$[?(@.id == -1)].apiKeyMasked").value("****1234"));
+
+            // 3. 用户可以将偏好模型设为系统环境变量模型 (id = -1)
+            mockMvc.perform(put("/api/auth/preferred-model")
+                            .session(adminSession)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(Map.of("modelId", -1))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.preferredModelId").value(-1));
+        } finally {
+            System.clearProperty("DEEPSEEK_API");
+        }
+    }
 }

@@ -161,7 +161,7 @@ public class AuthService {
 
     public List<AvailableModelDto> getAvailableModels() {
         currentUserProvider.requireCurrentUser();
-        return jdbcTemplate.query(
+        List<AvailableModelDto> list = new java.util.ArrayList<>(jdbcTemplate.query(
                 "SELECT id, role, name, model FROM llm_config WHERE enabled = 1 AND role = 'chat' ORDER BY id ASC",
                 (rs, rowNum) -> new AvailableModelDto(
                         rs.getLong("id"),
@@ -169,7 +169,16 @@ public class AuthService {
                         rs.getString("name"),
                         rs.getString("model")
                 )
-        );
+        ));
+        for (RoutingLlmGateway.EnvModelInfo envModel : routingLlmGateway.getEnvChatModels()) {
+            list.add(new AvailableModelDto(
+                    envModel.id(),
+                    envModel.role(),
+                    envModel.name(),
+                    envModel.model()
+            ));
+        }
+        return list;
     }
 
     public UserProfileResponse updatePreferredModel(PreferredModelRequest request) {
@@ -177,17 +186,31 @@ public class AuthService {
         if (request == null || request.modelId() == null) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "请选择有效的模型 ID");
         }
+        long modelId = request.modelId();
+        if (modelId < 0) {
+            boolean envExists = routingLlmGateway.getEnvChatModels().stream().anyMatch(m -> m.id() == modelId);
+            if (!envExists) {
+                throw new BusinessException(ErrorCode.NOT_FOUND, "所选环境变量模型不存在");
+            }
+            jdbcTemplate.update(
+                    "UPDATE users SET preferred_model_id = ? WHERE id = ?",
+                    modelId,
+                    current.id()
+            );
+            return buildUserProfileResponse(current.id());
+        }
+
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM llm_config WHERE id = ? AND enabled = 1 AND role = 'chat'",
                 Integer.class,
-                request.modelId()
+                modelId
         );
         if (count == null || count == 0) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "所选对话模型不存在或未启用");
         }
         jdbcTemplate.update(
                 "UPDATE users SET preferred_model_id = ? WHERE id = ?",
-                request.modelId(),
+                modelId,
                 current.id()
         );
         return buildUserProfileResponse(current.id());

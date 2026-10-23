@@ -46,6 +46,12 @@ public class RoutingLlmGateway implements LlmGateway {
     public static final ZoneId SHANGHAI_ZONE = ZoneId.of("Asia/Shanghai");
     private static final int DEFAULT_DAILY_TOKEN_LIMIT = 100000;
 
+    // 系统环境变量模型虚拟 ID（负数与数据库自增主键物理隔离）
+    public static final long ENV_MODEL_DEEPSEEK_ID = -1L;
+    public static final long ENV_MODEL_OPENAI_ID = -2L;
+    public static final long ENV_MODEL_VISION_ID = -3L;
+    public static final long ENV_MODEL_EMBEDDING_ID = -4L;
+
     private final JdbcTemplate jdbcTemplate;
     private final MockLlmGateway mockLlmGateway;
     private final AesGcmCrypto aesGcmCrypto;
@@ -271,23 +277,49 @@ public class RoutingLlmGateway implements LlmGateway {
 
     private Optional<LlmConfigRecord> findActiveConfigForRole(LlmRole role, Long preferredId) {
         if (preferredId != null) {
-            List<LlmConfigRecord> preferred = jdbcTemplate.query(
-                    "SELECT id, role, name, base_url, model, api_key_encrypted FROM llm_config WHERE id = ? AND role = ? AND enabled = 1",
-                    (rs, rowNum) -> new LlmConfigRecord(
-                            rs.getLong("id"),
-                            rs.getString("role"),
-                            rs.getString("name"),
-                            rs.getString("base_url"),
-                            rs.getString("model"),
-                            rs.getString("api_key_encrypted")
-                    ),
-                    preferredId,
-                    role.name()
-            );
-            if (!preferred.isEmpty()) {
-                return Optional.of(preferred.get(0));
+            // 优先检查是否为系统环境变量虚拟模型 ID
+            if (preferredId == ENV_MODEL_DEEPSEEK_ID) {
+                Optional<LlmConfigRecord> envCfg = getDeepSeekEnvConfig();
+                if (envCfg.isPresent()) {
+                    return envCfg;
+                }
+            } else if (preferredId == ENV_MODEL_OPENAI_ID) {
+                Optional<LlmConfigRecord> envCfg = getOpenAiEnvConfig();
+                if (envCfg.isPresent()) {
+                    return envCfg;
+                }
+            } else if (preferredId == ENV_MODEL_VISION_ID) {
+                Optional<LlmConfigRecord> envCfg = getVisionEnvConfig();
+                if (envCfg.isPresent()) {
+                    return envCfg;
+                }
+            } else if (preferredId == ENV_MODEL_EMBEDDING_ID) {
+                Optional<LlmConfigRecord> envCfg = getEmbeddingEnvConfig();
+                if (envCfg.isPresent()) {
+                    return envCfg;
+                }
+            } else if (preferredId > 0) {
+                List<LlmConfigRecord> preferred = jdbcTemplate.query(
+                        "SELECT id, role, name, base_url, model, api_key_encrypted FROM llm_config WHERE id = ? AND role = ? AND enabled = 1",
+                        (rs, rowNum) -> new LlmConfigRecord(
+                                rs.getLong("id"),
+                                rs.getString("role"),
+                                rs.getString("name"),
+                                rs.getString("base_url"),
+                                rs.getString("model"),
+                                rs.getString("api_key_encrypted"),
+                                false
+                        ),
+                        preferredId,
+                        role.name()
+                );
+                if (!preferred.isEmpty()) {
+                    return Optional.of(preferred.get(0));
+                }
             }
         }
+
+        // 默认优先：查找数据库中已启用的模型配置
         List<LlmConfigRecord> configs = jdbcTemplate.query(
                 "SELECT id, role, name, base_url, model, api_key_encrypted FROM llm_config WHERE role = ? AND enabled = 1 ORDER BY id ASC LIMIT 1",
                 (rs, rowNum) -> new LlmConfigRecord(
@@ -296,15 +328,129 @@ public class RoutingLlmGateway implements LlmGateway {
                         rs.getString("name"),
                         rs.getString("base_url"),
                         rs.getString("model"),
-                        rs.getString("api_key_encrypted")
+                        rs.getString("api_key_encrypted"),
+                        false
                 ),
                 role.name()
         );
-        return configs.stream().findFirst();
+        if (!configs.isEmpty()) {
+            return Optional.of(configs.get(0));
+        }
+
+        // 数据库无启用配置时：自动回退并调用系统环境变量（双支持模式）
+        return findEnvConfigForRole(role);
+    }
+
+    public Optional<LlmConfigRecord> findEnvConfigForRole(LlmRole role) {
+        if (role == LlmRole.chat) {
+            Optional<LlmConfigRecord> ds = getDeepSeekEnvConfig();
+            if (ds.isPresent()) {
+                return ds;
+            }
+            return getOpenAiEnvConfig();
+        }
+        if (role == LlmRole.vision) {
+            return getVisionEnvConfig();
+        }
+        if (role == LlmRole.embedding) {
+            return getEmbeddingEnvConfig();
+        }
+        return Optional.empty();
+    }
+
+    public Optional<LlmConfigRecord> getDeepSeekEnvConfig() {
+        String key = getEnv("DEEPSEEK_API", "DEEPSEEK_API_KEY");
+        if (key == null || key.isBlank()) {
+            return Optional.empty();
+        }
+        String baseUrl = getEnvOrDefault("https://api.deepseek.com", "DEEPSEEK_BASE_URL");
+        String model = getEnvOrDefault("deepseek-chat", "DEEPSEEK_MODEL");
+        return Optional.of(new LlmConfigRecord(
+                ENV_MODEL_DEEPSEEK_ID,
+                "chat",
+                "DeepSeek (系统环境变量)",
+                baseUrl,
+                model,
+                key.trim(),
+                true
+        ));
+    }
+
+    public Optional<LlmConfigRecord> getOpenAiEnvConfig() {
+        String key = getEnv("OPENAI_API", "OPENAI_API_KEY");
+        if (key == null || key.isBlank()) {
+            return Optional.empty();
+        }
+        String baseUrl = getEnvOrDefault("https://api.openai.com/v1", "OPENAI_BASE_URL");
+        String model = getEnvOrDefault("gpt-4o-mini", "OPENAI_MODEL");
+        return Optional.of(new LlmConfigRecord(
+                ENV_MODEL_OPENAI_ID,
+                "chat",
+                "OpenAI (系统环境变量)",
+                baseUrl,
+                model,
+                key.trim(),
+                true
+        ));
+    }
+
+    public Optional<LlmConfigRecord> getVisionEnvConfig() {
+        String key = getEnv("VISION_API", "VISION_API_KEY", "OPENAI_API_KEY");
+        if (key == null || key.isBlank()) {
+            return Optional.empty();
+        }
+        String baseUrl = getEnvOrDefault("https://api.openai.com/v1", "VISION_BASE_URL", "OPENAI_BASE_URL");
+        String model = getEnvOrDefault("gpt-4o-mini", "VISION_MODEL", "OPENAI_MODEL");
+        return Optional.of(new LlmConfigRecord(
+                ENV_MODEL_VISION_ID,
+                "vision",
+                "Vision (系统环境变量)",
+                baseUrl,
+                model,
+                key.trim(),
+                true
+        ));
+    }
+
+    public Optional<LlmConfigRecord> getEmbeddingEnvConfig() {
+        String key = getEnv("EMBEDDING_API", "EMBEDDING_API_KEY", "OPENAI_API_KEY");
+        if (key == null || key.isBlank()) {
+            return Optional.empty();
+        }
+        String baseUrl = getEnvOrDefault("https://api.openai.com/v1", "EMBEDDING_BASE_URL", "OPENAI_BASE_URL");
+        String model = getEnvOrDefault("text-embedding-3-small", "EMBEDDING_MODEL");
+        return Optional.of(new LlmConfigRecord(
+                ENV_MODEL_EMBEDDING_ID,
+                "embedding",
+                "Embedding (系统环境变量)",
+                baseUrl,
+                model,
+                key.trim(),
+                true
+        ));
+    }
+
+    public static String getEnv(String... names) {
+        for (String name : names) {
+            String val = System.getenv(name);
+            if (val != null && !val.isBlank()) {
+                return val.trim();
+            }
+            String prop = System.getProperty(name);
+            if (prop != null && !prop.isBlank()) {
+                return prop.trim();
+            }
+        }
+        return null;
+    }
+
+    public static String getEnvOrDefault(String defaultValue, String... names) {
+        String v = getEnv(names);
+        return (v != null && !v.isBlank()) ? v : defaultValue;
     }
 
     private ChatResult executeRealChat(LlmConfigRecord config, List<ChatMessage> messages) {
-        String apiKey = aesGcmCrypto.decrypt(config.apiKeyEncrypted());
+        String apiKey = config.resolveApiKey(aesGcmCrypto);
         String endpoint = buildEndpointUrl(config.baseUrl(), "/chat/completions");
         String promptText = concatMessages(messages);
 
@@ -347,7 +493,7 @@ public class RoutingLlmGateway implements LlmGateway {
             List<ChatMessage> messages,
             LlmStreamListener listener
     ) {
-        String apiKey = aesGcmCrypto.decrypt(config.apiKeyEncrypted());
+        String apiKey = config.resolveApiKey(aesGcmCrypto);
         String endpoint = buildEndpointUrl(config.baseUrl(), "/chat/completions");
         String promptText = concatMessages(messages);
 
@@ -426,7 +572,7 @@ public class RoutingLlmGateway implements LlmGateway {
     }
 
     private ChatResult executeRealVision(LlmConfigRecord config, byte[] imageBytes, String mimeType, String prompt) {
-        String apiKey = aesGcmCrypto.decrypt(config.apiKeyEncrypted());
+        String apiKey = config.resolveApiKey(aesGcmCrypto);
         String endpoint = buildEndpointUrl(config.baseUrl(), "/chat/completions");
         String effectiveMime = (mimeType == null || mimeType.isBlank()) ? "image/png" : mimeType;
         String effectivePrompt = (prompt == null || prompt.isBlank())
@@ -470,7 +616,7 @@ public class RoutingLlmGateway implements LlmGateway {
     }
 
     private EmbeddingCallResult executeRealEmbedding(LlmConfigRecord config, String text) {
-        String apiKey = aesGcmCrypto.decrypt(config.apiKeyEncrypted());
+        String apiKey = config.resolveApiKey(aesGcmCrypto);
         String endpoint = buildEndpointUrl(config.baseUrl(), "/embeddings");
         String safeText = text == null ? "" : text;
 
@@ -539,6 +685,65 @@ public class RoutingLlmGateway implements LlmGateway {
         return base + "/v1" + subPath;
     }
 
+    public record EnvModelInfo(
+            long id,
+            String role,
+            String name,
+            String baseUrl,
+            String model,
+            String apiKeyMasked
+    ) {}
+
+    public List<EnvModelInfo> getEnvChatModels() {
+        List<EnvModelInfo> list = new ArrayList<>();
+        getDeepSeekEnvConfig().ifPresent(cfg ->
+                list.add(new EnvModelInfo(
+                        cfg.id(),
+                        cfg.role(),
+                        cfg.name(),
+                        cfg.baseUrl(),
+                        cfg.model(),
+                        AesGcmCrypto.maskApiKey(cfg.apiKeyEncrypted())
+                ))
+        );
+        getOpenAiEnvConfig().ifPresent(cfg ->
+                list.add(new EnvModelInfo(
+                        cfg.id(),
+                        cfg.role(),
+                        cfg.name(),
+                        cfg.baseUrl(),
+                        cfg.model(),
+                        AesGcmCrypto.maskApiKey(cfg.apiKeyEncrypted())
+                ))
+        );
+        return list;
+    }
+
+    public List<EnvModelInfo> getAllEnvModels() {
+        List<EnvModelInfo> list = new ArrayList<>(getEnvChatModels());
+        getVisionEnvConfig().ifPresent(cfg ->
+                list.add(new EnvModelInfo(
+                        cfg.id(),
+                        cfg.role(),
+                        cfg.name(),
+                        cfg.baseUrl(),
+                        cfg.model(),
+                        AesGcmCrypto.maskApiKey(cfg.apiKeyEncrypted())
+                ))
+        );
+        getEmbeddingEnvConfig().ifPresent(cfg ->
+                list.add(new EnvModelInfo(
+                        cfg.id(),
+                        cfg.role(),
+                        cfg.name(),
+                        cfg.baseUrl(),
+                        cfg.model(),
+                        AesGcmCrypto.maskApiKey(cfg.apiKeyEncrypted())
+                ))
+        );
+        return list;
+    }
+
     private String concatMessages(List<ChatMessage> messages) {
         if (messages == null || messages.isEmpty()) {
             return "";
@@ -557,14 +762,21 @@ public class RoutingLlmGateway implements LlmGateway {
         return kind.trim().toLowerCase(Locale.ROOT);
     }
 
-    private record LlmConfigRecord(
+    public record LlmConfigRecord(
             long id,
             String role,
             String name,
             String baseUrl,
             String model,
-            String apiKeyEncrypted
+            String apiKeyEncrypted,
+            boolean fromEnv
     ) {
+        public String resolveApiKey(AesGcmCrypto crypto) {
+            if (fromEnv) {
+                return apiKeyEncrypted;
+            }
+            return crypto.decrypt(apiKeyEncrypted);
+        }
     }
 
     private record EmbeddingCallResult(float[] vector, TokenUsage usage) {

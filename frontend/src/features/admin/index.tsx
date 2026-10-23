@@ -596,7 +596,7 @@ export const AdminPage: React.FC = () => {
               <div>
                 <h2 className="text-base font-bold text-slate-900">已配置的大模型列表</h2>
                 <p className="text-xs text-slate-500">
-                  当无已启用的对话模型或设置 ONETERM_MOCK=true 时，系统自动使用内置 Mock 网关
+                  支持「系统环境变量 + 数据库配置」双支持模式；未配置外部模型或设置 ONETERM_MOCK=true 时自动使用 Mock 网关
                 </p>
               </div>
               <button
@@ -608,6 +608,11 @@ export const AdminPage: React.FC = () => {
                 <RefreshCw className="w-3.5 h-3.5" />
                 刷新
               </button>
+            </div>
+
+            <div className="mb-3.5 p-3 bg-teal-50/80 border border-teal-200 rounded-xl text-xs text-teal-900 flex items-start gap-2">
+              <span className="font-bold shrink-0">双支持模式：</span>
+              <span>系统会自动侦测并调用操作系统环境变量中的 API 密钥（如 <code>DEEPSEEK_API</code>、<code>DEEPSEEK_API_KEY</code>、<code>OPENAI_API_KEY</code>）。同时支持在左侧录入数据库密钥，两者共存无缝切换。</span>
             </div>
 
             {configs.length === 0 ? (
@@ -630,6 +635,11 @@ export const AdminPage: React.FC = () => {
                           >
                             {badge.text}
                           </span>
+                          {cfg.id < 0 && (
+                            <span className="px-2 py-0.5 rounded text-[11px] font-medium border bg-purple-50 text-purple-700 border-purple-200">
+                              ENV 环境变量
+                            </span>
+                          )}
                           <span className="font-bold text-sm text-slate-900">{cfg.name}</span>
                           <span
                             className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
@@ -651,37 +661,45 @@ export const AdminPage: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleConfigEnabled(cfg)}
-                          className="btn-secondary py-1 px-2.5 text-xs"
-                        >
-                          <Power className="w-3.5 h-3.5" />
-                          {cfg.enabled ? '停用' : '启用'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingConfigId(cfg.id);
-                            setCfgRole(cfg.role);
-                            setCfgName(cfg.name);
-                            setCfgBaseUrl(cfg.baseUrl);
-                            setCfgModel(cfg.model);
-                            setCfgApiKey('');
-                            setCfgEnabled(cfg.enabled);
-                          }}
-                          className="btn-secondary py-1 px-2.5 text-xs"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                          编辑
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteConfig(cfg)}
-                          className="btn-secondary py-1 px-2.5 text-xs text-rose-600 border-rose-200 hover:bg-rose-50"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {cfg.id < 0 ? (
+                          <span className="text-[11px] text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200">
+                            系统环境变量提供
+                          </span>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleConfigEnabled(cfg)}
+                              className="btn-secondary py-1 px-2.5 text-xs"
+                            >
+                              <Power className="w-3.5 h-3.5" />
+                              {cfg.enabled ? '停用' : '启用'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingConfigId(cfg.id);
+                                setCfgRole(cfg.role);
+                                setCfgName(cfg.name);
+                                setCfgBaseUrl(cfg.baseUrl);
+                                setCfgModel(cfg.model);
+                                setCfgApiKey('');
+                                setCfgEnabled(cfg.enabled);
+                              }}
+                              className="btn-secondary py-1 px-2.5 text-xs"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                              编辑
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteConfig(cfg)}
+                              className="btn-secondary py-1 px-2.5 text-xs text-rose-600 border-rose-200 hover:bg-rose-50"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   );

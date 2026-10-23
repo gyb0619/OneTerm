@@ -47,7 +47,29 @@ mvn -f backend/pom.xml spring-boot:run
 
 ---
 
-## 二、Mock 模式与零配置评委体验说明
+## 二、大模型双支持模式（系统环境变量 + 数据库配置）
+
+OneTerm 支持 **「系统环境变量直接调用」** 与 **「管理后台数据库配置」** 的双支持模式：
+
+1. **方式 A：系统环境变量（开箱即用，推荐开发者使用）**：
+   - 只要操作系统或 `.env` 中设置了 `DEEPSEEK_API`（或 `DEEPSEEK_API_KEY`），系统启动后将**自动侦测并直连** DeepSeek 官方接口（`https://api.deepseek.com`），无需在管理后台做任何录入！
+   - 支持的环境变量名：
+     - **对话/抽取/问答/可视化**：`DEEPSEEK_API` 或 `DEEPSEEK_API_KEY`（可选 `DEEPSEEK_BASE_URL`、`DEEPSEEK_MODEL`）；亦兼容 `OPENAI_API_KEY`
+     - **图片识图转文字**：`VISION_API_KEY`（可选 `VISION_BASE_URL`、`VISION_MODEL`）
+     - **文本向量化**：`EMBEDDING_API_KEY`（可选 `EMBEDDING_BASE_URL`、`EMBEDDING_MODEL`）
+   - 用户登录后可在「切换当前对话模型」中直接看到并选择 `DeepSeek (系统环境变量)`。
+
+2. **方式 B：管理后台数据库配置（安全加密，推荐多租户管理）**：
+   - 管理员登录管理后台后，可在界面新增、启用/停用、切换不同厂商的对话、识图、向量模型。
+   - 所有录入的 API Key 均使用 **AES-256-GCM** 加密存储于数据库，界面仅显示脱敏尾号（如 `****8f2a`）。
+
+3. **双支持协同优先级**：
+   - **用户显式偏好优先**：若用户指定了偏好模型（无论是环境变量模型还是数据库模型），以用户选择为准。
+   - **默认调度策略**：若用户未指定，优先使用数据库中已启用的模型；若数据库无配置，自动回退并调用系统环境变量中的 API 密钥；若两者皆未配置或设置 `ONETERM_MOCK=true`，则自动无缝降级为内置 Mock 演示网关。
+
+---
+
+## 三、Mock 模式与零配置评委体验说明
 
 1. **自动触发条件**：
    - 当环境变量 `ONETERM_MOCK=true`，或数据库中尚未配置任何启用的大模型 API Key 时，系统自动进入 **Mock 演示模式**。
