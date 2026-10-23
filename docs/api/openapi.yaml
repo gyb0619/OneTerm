@@ -1,0 +1,1402 @@
+openapi: 3.0.3
+info:
+  title: 一学期 OneTerm API 契约文档
+  description: |
+    「一学期 OneTerm」前后端统一接口契约。
+    - 鉴权方式：HttpOnly Session Cookie + CSRF Header (`X-XSRF-TOKEN`)
+    - 时区约定：`Asia/Shanghai` (ISO 8601)
+    - 流式协议：Server-Sent Events (`text/event-stream`)，统一使用 `progress`、`delta`、`done`、`error` 四类事件
+    - 数据隔离：所有业务接口强制按当前登录 `user_id` 过滤，跨用户越权访问一律返回 `404 NOT_FOUND`
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+    description: 本地开发服务器
+
+tags:
+  - name: auth
+    description: 认证、会话、可选模型切换与一键示例载入（归属：子代理 E）
+  - name: admin
+    description: 管理员后台：账号管理、模型配置、Token 额度与用量（归属：子代理 E）
+  - name: extract
+    description: 文本/文件/图片导入、结构化事件流式抽取与事件管理（归属：子代理 A）
+  - name: calendar
+    description: 周视图日历、冲突检测、负载热力图、考前复习排期与 ICS 导出（归属：子代理 B / 阶段 2）
+  - name: qa
+    description: 原文切片、向量/BM25 检索与带引用的流式 RAG 问答（归属：子代理 C）
+  - name: visualize
+    description: 知识点交互式 HTML 生成、安全沙箱校验与展示（归属：子代理 D）
+
+paths:
+  /api/auth/login:
+    post:
+      tags: [auth]
+      summary: 用户登录
+      description: 校验用户名与 BCrypt 密码；连续失败 5 次锁定 10 分钟（返回 423）。
+      x-subagent: subagent-E
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 登录成功，设置 HttpOnly Session Cookie 与 XSRF-TOKEN Cookie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '423':
+          $ref: '#/components/responses/AccountLocked'
+
+  /api/auth/logout:
+    post:
+      tags: [auth]
+      summary: 退出登录
+      x-subagent: subagent-E
+      responses:
+        '200':
+          description: 退出成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleSuccessResponse'
+
+  /api/auth/me:
+    get:
+      tags: [auth]
+      summary: 获取当前登录用户信息与今日额度状态
+      x-subagent: subagent-E
+      responses:
+        '200':
+          description: 当前登录用户信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/auth/models:
+    get:
+      tags: [auth]
+      summary: 获取用户可选的已启用对话模型列表
+      description: 仅返回管理员已启用的模型基本信息，绝不返回 API Key 或内部接口地址。
+      x-subagent: subagent-E
+      responses:
+        '200':
+          description: 可选模型列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AvailableModelDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/auth/preferred-model:
+    put:
+      tags: [auth]
+      summary: 更新当前用户的偏好对话模型
+      x-subagent: subagent-E
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [modelId]
+              properties:
+                modelId:
+                  type: integer
+                  format: int64
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/auth/demo-load:
+    post:
+      tags: [auth]
+      summary: 一键载入示例数据并登录体验
+      description: 登录页或空状态下的「一键载入示例数据」入口。若未登录则自动使用/初始化演示学生账号登录，并幂等载入标准示例事件、切片、复习知识点与预置可视化。
+      x-subagent: subagent-E
+      responses:
+        '200':
+          description: 示例数据载入完成并返回当前会话信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/admin/users:
+    get:
+      tags: [admin]
+      summary: 获取所有账号列表及今日 Token 用量（仅 ADMIN）
+      x-subagent: subagent-E
+      responses:
+        '200':
+          description: 用户列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminUserDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [admin]
+      summary: 创建新用户账号（仅 ADMIN）
+      x-subagent: subagent-E
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/admin/users/{id}:
+    put:
+      tags: [admin]
+      summary: 修改用户状态（启用/停用）或每日 Token 额度（仅 ADMIN）
+      x-subagent: subagent-E
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: 修改成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/admin/users/{id}/reset-password:
+    post:
+      tags: [admin]
+      summary: 重置指定用户密码并解除登录锁定（仅 ADMIN）
+      x-subagent: subagent-E
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [newPassword]
+              properties:
+                newPassword:
+                  type: string
+                  minLength: 6
+      responses:
+        '200':
+          description: 重置成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleSuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/admin/llm-configs:
+    get:
+      tags: [admin]
+      summary: 获取大模型配置列表（API Key 仅显示脱敏尾号，仅 ADMIN）
+      x-subagent: subagent-E
+      responses:
+        '200':
+          description: 模型配置列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LlmConfigDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [admin]
+      summary: 新增模型配置（AES-256-GCM 加密存储 Key，仅 ADMIN）
+      x-subagent: subagent-E
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveLlmConfigRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LlmConfigDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/admin/llm-configs/{id}:
+    put:
+      tags: [admin]
+      summary: 更新模型配置或启停状态（仅 ADMIN）
+      x-subagent: subagent-E
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveLlmConfigRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LlmConfigDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [admin]
+      summary: 删除模型配置（仅 ADMIN）
+      x-subagent: subagent-E
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleSuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/admin/usage-logs:
+    get:
+      tags: [admin]
+      summary: 查看全局或指定用户的 Token 用量记录（仅 ADMIN）
+      x-subagent: subagent-E
+      parameters:
+        - name: userId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 用量日志列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UsageLogDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/extract/file:
+    post:
+      tags: [extract]
+      summary: 上传文件（txt / xlsx / 图片）解析为待抽取文本
+      description: |
+        支持上传 `.txt`、`.xlsx`、图片（`.png`、`.jpg`、`.jpeg`、`.webp`）。
+        图片文件由后端调用独立的 `vision` 识图模型转为纯文本（计入 Token 额度），返回解析出的文本供流式抽取使用。
+      x-subagent: subagent-A
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: 文件内容成功转为文本
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [fileName, extractedText, sourceType]
+                properties:
+                  fileName:
+                    type: string
+                  sourceType:
+                    type: string
+                    enum: [txt, xlsx, image]
+                  extractedText:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/QuotaExceeded'
+        '502':
+          $ref: '#/components/responses/LlmUpstreamError'
+
+  /api/extract/stream:
+    post:
+      tags: [extract]
+      summary: 从教务文本流式抽取结构化事件（SSE）
+      description: |
+        将用户粘贴或文件解析出的文本发给大模型，要求只返回符合 Event 结构的 JSON 并保留 `sourceText`。
+        - 系统提示词内置防提示词注入声明（将用户文本严格视为待处理数据而非指令）。
+        - 通过 SSE 推送进度（如「正在识别第 N 条事件」）。
+        - JSON 解析失败自动重试一次，仍失败则发送 SSE `error` 事件（code=`VALIDATION_FAILED`）。
+      x-subagent: subagent-A
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                  description: 待抽取的原始教务通知/课表文本
+      responses:
+        '200':
+          description: SSE 事件流（progress / delta / done / error），done 事件返回抽取出的 EventDraft 列表
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/QuotaExceeded'
+
+  /api/events/batch:
+    post:
+      tags: [extract]
+      summary: 批量确认入库已核对编辑的事件列表
+      description: 用户在前端核对、编辑、删除或手动补充抽取结果后确认入库，并触发 RAG 原文切片同步。
+      x-subagent: subagent-A
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [events]
+              properties:
+                events:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/EventInputDto'
+      responses:
+        '201':
+          description: 入库成功，返回带 ID 的完整事件列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/events:
+    get:
+      tags: [extract]
+      summary: 查询当前登录用户的事件列表
+      x-subagent: subagent-A
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/EventType'
+        - name: start
+          in: query
+          required: false
+          description: 起始时间过滤（ISO 8601）
+          schema:
+            type: string
+        - name: end
+          in: query
+          required: false
+          description: 结束时间过滤（ISO 8601）
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 事件列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [extract]
+      summary: 手动新增单条事件
+      x-subagent: subagent-A
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventInputDto'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/events/{id}:
+    put:
+      tags: [extract]
+      summary: 编辑指定事件（强制校验 user_id，越权返回 404）
+      x-subagent: subagent-A
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventInputDto'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [extract]
+      summary: 删除指定事件（强制校验 user_id，越权返回 404）
+      x-subagent: subagent-A
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleSuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/calendar/overview:
+    get:
+      tags: [calendar]
+      summary: 获取学期日历全景、冲突检测结果与负载热力图
+      description: |
+        一次性返回当前用户的：
+        1. 事件列表与已排期复习任务
+        2. 冲突检测列表（完全重叠、部分重叠算冲突，首尾相接不算）
+        3. 每周任务密度与每日热力图分值
+        4. 高亮摘要：「最空的一天」「最忙的一天」「最忙的一周」
+      x-subagent: subagent-B
+      parameters:
+        - name: semesterStart
+          in: query
+          required: false
+          description: 学期起始日期（YYYY-MM-DD）
+          schema:
+            type: string
+        - name: semesterEnd
+          in: query
+          required: false
+          description: 学期结束日期（YYYY-MM-DD）
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 日历全景与热力图统计
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarOverviewResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/calendar/conflicts:
+    get:
+      tags: [calendar]
+      summary: 获取当前用户的所有日程时间冲突
+      x-subagent: subagent-B
+      responses:
+        '200':
+          description: 冲突对列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConflictPairDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/calendar/review-topics:
+    get:
+      tags: [calendar]
+      summary: 查询当前用户的考前复习知识点及排期列表
+      x-subagent: subagent-B
+      parameters:
+        - name: eventId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 复习知识点列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReviewTopicDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [calendar]
+      summary: 为考试或课程新增知识点条目
+      x-subagent: subagent-B
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [eventId, topic]
+              properties:
+                eventId:
+                  type: integer
+                  format: int64
+                topic:
+                  type: string
+                plannedDate:
+                  type: string
+                  nullable: true
+                  description: 可选初始计划日期（YYYY-MM-DD），为空则由排期算法自动分配
+      responses:
+        '201':
+          description: 新增成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewTopicDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/calendar/review-topics/schedule:
+    post:
+      tags: [calendar]
+      summary: 自动生成考前复习路径并写回日历
+      description: 将知识点按关联考试日期倒排，自动安排到考前的空闲日，均衡每日负载并避开冲突日，写回数据库与日历。
+      x-subagent: subagent-B
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                startDate:
+                  type: string
+                  description: 排期基准起始日（YYYY-MM-DD），默认取今天或学期首日
+      responses:
+        '200':
+          description: 排期完成后的全部复习任务列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReviewTopicDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/calendar/review-topics/{id}:
+    put:
+      tags: [calendar]
+      summary: 调整复习计划日期或标记完成状态（越权返回 404）
+      x-subagent: subagent-B
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                topic:
+                  type: string
+                plannedDate:
+                  type: string
+                  nullable: true
+                done:
+                  type: boolean
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewTopicDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [calendar]
+      summary: 删除复习知识点（越权返回 404）
+      x-subagent: subagent-B
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleSuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/calendar/export.ics:
+    get:
+      tags: [calendar]
+      summary: 一键导出标准 .ics 日历文件（含事件与考前复习任务）
+      x-subagent: main-agent
+      responses:
+        '200':
+          description: iCalendar (.ics) 文件流
+          content:
+            text/calendar:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/qa/index:
+    post:
+      tags: [qa]
+      summary: 重建当前用户事件原文切片与向量索引
+      description: 将当前用户的事件原文切片，若配置了 embedding 模型则生成 float32 BLOB 向量入库；未配置则仅保存文本切片供 BM25 检索。
+      x-subagent: subagent-C
+      responses:
+        '200':
+          description: 切片与索引构建完成
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [chunkCount, mode]
+                properties:
+                  chunkCount:
+                    type: integer
+                  mode:
+                    type: string
+                    enum: [embedding, bm25]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/QuotaExceeded'
+
+  /api/qa/ask/stream:
+    post:
+      tags: [qa]
+      summary: 自然语言 RAG 流式问答（带原文引用，SSE）
+      description: |
+        检索与问题最相关的前 4 条原文切片（优先余弦相似度，未配置向量模型时自动降级为 BM25 检索），
+        通过 SSE 流式输出回答（`delta`），并在结束事件（`done`）中返回引用的原文片段及关联 `eventId`。
+      x-subagent: subagent-C
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                question:
+                  type: string
+                  example: 下周三有空吗？期末前哪几门最紧？
+      responses:
+        '200':
+          description: SSE 流式问答响应（progress / delta / done / error）
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/QuotaExceeded'
+
+  /api/visualize/generate/stream:
+    post:
+      tags: [visualize]
+      summary: 流式生成知识点交互式可视化单文件 HTML（SSE）
+      description: |
+        根据知识点名称（第一版支持算法与网络协议类，如「冒泡排序」「TCP 三次握手」）调用大模型生成带滑块与控制按钮的单文件 HTML。
+        后端强制执行安全沙箱校验：
+        1. 体积 ≤ 100KB
+        2. 禁止出现任何外部网络请求（http/https 外链、fetch、XMLHttpRequest、WebSocket、import 外链）
+        校验不通过自动重试一次，仍不通过则返回错误。通过后存入 `visualizations` 表。
+      x-subagent: subagent-D
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [topic]
+              properties:
+                topicId:
+                  type: integer
+                  format: int64
+                  nullable: true
+                  description: 关联的 review_topics.id（若未传则根据 eventId + topic 自动创建或关联）
+                eventId:
+                  type: integer
+                  format: int64
+                  nullable: true
+                  description: 关联的考试或课程事件 ID
+                topic:
+                  type: string
+                  example: 冒泡排序
+      responses:
+        '200':
+          description: SSE 流式生成进度与最终入库后的 VisualizationDto（done 事件）
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '429':
+          $ref: '#/components/responses/QuotaExceeded'
+
+  /api/visualize:
+    get:
+      tags: [visualize]
+      summary: 获取当前用户已生成的知识点可视化列表
+      x-subagent: subagent-D
+      parameters:
+        - name: topicId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 可视化记录列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VisualizationDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/visualize/{id}:
+    get:
+      tags: [visualize]
+      summary: 获取单个知识点可视化详情（含完整 HTML，越权返回 404）
+      x-subagent: subagent-D
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '200':
+          description: 可视化详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisualizationDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [visualize]
+      summary: 删除指定可视化记录（越权返回 404）
+      x-subagent: subagent-D
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleSuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  parameters:
+    PathId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+
+  responses:
+    BadRequest:
+      description: 请求参数错误 (400)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: 未登录或会话已失效 (401)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: 无权限访问或 CSRF 校验失败 (403)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: 资源不存在或跨用户越权访问被拦截 (404)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Conflict:
+      description: 资源冲突 (409)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    ValidationFailed:
+      description: 大模型输出格式或安全沙箱校验未通过 (422)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    AccountLocked:
+      description: 登录失败满 5 次，账号处于 10 分钟锁定期 (423)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    QuotaExceeded:
+      description: 超出每日 Token 额度上限 (429)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    InternalError:
+      description: 服务器内部错误 (500)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    LlmUpstreamError:
+      description: 上游大模型服务调用失败 (502)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+
+  schemas:
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: UNAUTHORIZED
+        message:
+          type: string
+          example: 请先登录后再访问
+
+    SimpleSuccessResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+
+    EventType:
+      type: string
+      enum: [course, exam, deadline, notice, activity]
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    UserProfileResponse:
+      type: object
+      required: [id, username, role, dailyTokenLimit, todayTokensUsed, mockMode]
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, USER]
+        enabled:
+          type: boolean
+        dailyTokenLimit:
+          type: integer
+        todayTokensUsed:
+          type: integer
+        preferredModelId:
+          type: integer
+          format: int64
+          nullable: true
+        mockMode:
+          type: boolean
+
+    AvailableModelDto:
+      type: object
+      required: [id, role, name, model]
+      properties:
+        id:
+          type: integer
+          format: int64
+        role:
+          type: string
+          enum: [chat, vision, embedding]
+        name:
+          type: string
+        model:
+          type: string
+
+    AdminUserDto:
+      type: object
+      required: [id, username, role, enabled, dailyTokenLimit, todayTokensUsed, failedCount]
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, USER]
+        enabled:
+          type: boolean
+        dailyTokenLimit:
+          type: integer
+        todayTokensUsed:
+          type: integer
+        failedCount:
+          type: integer
+        lockedUntil:
+          type: string
+          nullable: true
+        preferredModelId:
+          type: integer
+          format: int64
+          nullable: true
+
+    CreateUserRequest:
+      type: object
+      required: [username, password, role]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          minLength: 6
+        role:
+          type: string
+          enum: [ADMIN, USER]
+        dailyTokenLimit:
+          type: integer
+          default: 100000
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        role:
+          type: string
+          enum: [ADMIN, USER]
+        dailyTokenLimit:
+          type: integer
+
+    LlmConfigDto:
+      type: object
+      required: [id, role, name, baseUrl, model, apiKeyMasked, enabled, updatedAt]
+      properties:
+        id:
+          type: integer
+          format: int64
+        role:
+          type: string
+          enum: [chat, vision, embedding]
+        name:
+          type: string
+        baseUrl:
+          type: string
+        model:
+          type: string
+        apiKeyMasked:
+          type: string
+          description: 仅展示脱敏尾号，例如 ****9f2a，绝不返回完整 Key
+        enabled:
+          type: boolean
+        updatedAt:
+          type: string
+
+    SaveLlmConfigRequest:
+      type: object
+      required: [role, name, baseUrl, model, enabled]
+      properties:
+        role:
+          type: string
+          enum: [chat, vision, embedding]
+        name:
+          type: string
+        baseUrl:
+          type: string
+        model:
+          type: string
+        apiKey:
+          type: string
+          description: 新增时必填；更新时若留空则保留原加密 Key
+        enabled:
+          type: boolean
+
+    UsageLogDto:
+      type: object
+      required: [id, userId, kind, promptTokens, completionTokens, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int64
+        userId:
+          type: integer
+          format: int64
+        username:
+          type: string
+        kind:
+          type: string
+          enum: [chat, vision, embedding, extract, qa, visualize]
+        promptTokens:
+          type: integer
+        completionTokens:
+          type: integer
+        createdAt:
+          type: string
+
+    EventInputDto:
+      type: object
+      required: [type, title, startTime, endTime, sourceText]
+      properties:
+        type:
+          $ref: '#/components/schemas/EventType'
+        title:
+          type: string
+        startTime:
+          type: string
+          description: ISO 8601 时间字符串
+        endTime:
+          type: string
+          description: ISO 8601 时间字符串
+        location:
+          type: string
+        courseName:
+          type: string
+        sourceText:
+          type: string
+
+    EventDto:
+      allOf:
+        - $ref: '#/components/schemas/EventInputDto'
+        - type: object
+          required: [id, userId]
+          properties:
+            id:
+              type: integer
+              format: int64
+            userId:
+              type: integer
+              format: int64
+
+    ConflictPairDto:
+      type: object
+      required: [eventA, eventB, conflictType, overlapStart, overlapEnd]
+      properties:
+        eventA:
+          $ref: '#/components/schemas/EventDto'
+        eventB:
+          $ref: '#/components/schemas/EventDto'
+        conflictType:
+          type: string
+          enum: [FULL_OVERLAP, PARTIAL_OVERLAP]
+        overlapStart:
+          type: string
+        overlapEnd:
+          type: string
+
+    DailyHeatmapItemDto:
+      type: object
+      required: [date, score, eventCount]
+      properties:
+        date:
+          type: string
+          example: '2026-11-04'
+        score:
+          type: integer
+          description: 当日负载权重总分（exam=5, deadline=3, course=2, activity=1, notice=1, review=2）
+        eventCount:
+          type: integer
+
+    WeeklyDensityItemDto:
+      type: object
+      required: [weekStart, weekEnd, totalScore, examCount, deadlineCount, courseCount, activityCount]
+      properties:
+        weekStart:
+          type: string
+        weekEnd:
+          type: string
+        totalScore:
+          type: integer
+        examCount:
+          type: integer
+        deadlineCount:
+          type: integer
+        courseCount:
+          type: integer
+        activityCount:
+          type: integer
+
+    CalendarOverviewResponse:
+      type: object
+      required: [events, reviewTopics, conflicts, dailyHeatmap, weeklyDensity]
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventDto'
+        reviewTopics:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewTopicDto'
+        conflicts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConflictPairDto'
+        dailyHeatmap:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyHeatmapItemDto'
+        weeklyDensity:
+          type: array
+          items:
+            $ref: '#/components/schemas/WeeklyDensityItemDto'
+        freestDay:
+          $ref: '#/components/schemas/DailyHeatmapItemDto'
+        busiestDay:
+          $ref: '#/components/schemas/DailyHeatmapItemDto'
+        busiestWeek:
+          $ref: '#/components/schemas/WeeklyDensityItemDto'
+
+    ReviewTopicDto:
+      type: object
+      required: [id, userId, eventId, topic, done]
+      properties:
+        id:
+          type: integer
+          format: int64
+        userId:
+          type: integer
+          format: int64
+        eventId:
+          type: integer
+          format: int64
+        eventTitle:
+          type: string
+        courseName:
+          type: string
+        examDate:
+          type: string
+        topic:
+          type: string
+        plannedDate:
+          type: string
+          nullable: true
+        done:
+          type: boolean
+        visualizationId:
+          type: integer
+          format: int64
+          nullable: true
+
+    QaCitationDto:
+      type: object
+      required: [chunkId, eventId, text, score]
+      properties:
+        chunkId:
+          type: integer
+          format: int64
+        eventId:
+          type: integer
+          format: int64
+        eventTitle:
+          type: string
+        text:
+          type: string
+        score:
+          type: number
+          format: float
+
+    VisualizationDto:
+      type: object
+      required: [id, userId, topicId, html, promptVersion, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int64
+        userId:
+          type: integer
+          format: int64
+        topicId:
+          type: integer
+          format: int64
+        topic:
+          type: string
+        html:
+          type: string
+        promptVersion:
+          type: string
+        createdAt:
+          type: string
