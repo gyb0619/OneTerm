@@ -1,0 +1,45 @@
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+*.db-journal
+data/
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+
+# Backend build & IDE
+backend/target/
+target/
+.mvn/timing.properties
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+
+# Frontend build & dependencies
+frontend/node_modules/
+node_modules/
+frontend/dist/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Logs & OS files
+*.log
+logs/
+.DS_Store
+Thumbs.db
+
+# Local raw prompt staging directory
+docx/
