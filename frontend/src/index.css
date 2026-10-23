@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* 清爽学院风设计变量：浅色底，蓝绿主色，卡片式布局 */
+  --bg-canvas: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-subtle: #f0fdfa;
+  --brand-primary: #0d9488;
+  --brand-primary-hover: #0f766e;
+  --brand-secondary: #0284c7;
+  --border-card: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+
+  /* 学期热力图单色渐变（由浅到深学院青绿） */
+  --heatmap-0: #f1f5f9;
+  --heatmap-1: #ccfbf1;
+  --heatmap-2: #5eead4;
+  --heatmap-3: #14b8a6;
+  --heatmap-4: #0f766e;
+
+  /* 事件类型语义色彩 */
+  --event-exam: #ef4444;
+  --event-deadline: #f59e0b;
+  --event-course: #0d9488;
+  --event-activity: #0284c7;
+  --event-notice: #64748b;
+}
+
+body {
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+@layer components {
+  .college-card {
+    @apply bg-white border border-slate-200 rounded-xl shadow-sm transition-shadow duration-150;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-colors;
+  }
+}
