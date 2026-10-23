@@ -4,7 +4,8 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -14,7 +15,7 @@ import java.util.List;
 
 /**
  * 纯函数文件文本提取工具（无 Spring 依赖）：
- * 支持 UTF-8 .txt 与 Apache POI XSSFWorkbook .xlsx 表格结构化文本拼接。
+ * 支持 UTF-8 .txt 以及通过 Apache POI WorkbookFactory 解析 .xls 与 .xlsx 表格。
  */
 public final class SpreadsheetTextExtractor {
 
@@ -29,7 +30,6 @@ public final class SpreadsheetTextExtractor {
             throw new IllegalArgumentException("上传的文本文件内容为空");
         }
         String text = new String(bytes, StandardCharsets.UTF_8);
-        // 去除 UTF-8 BOM（如果存在）
         if (text.startsWith("\uFEFF")) {
             text = text.substring(1);
         }
@@ -41,16 +41,16 @@ public final class SpreadsheetTextExtractor {
     }
 
     /**
-     * 使用 Apache POI XSSFWorkbook 读取 .xlsx 所有工作表非空单元格并拼接为结构化文本。
+     * 读取 .xlsx 或 .xls 工作簿中所有工作表非空单元格并拼接为结构化文本。
      */
-    public static String extractXlsx(byte[] bytes) {
+    public static String extractSpreadsheet(byte[] bytes) {
         if (bytes == null || bytes.length == 0) {
             throw new IllegalArgumentException("上传的 Excel 文件内容为空");
         }
         DataFormatter formatter = new DataFormatter();
         StringBuilder sb = new StringBuilder();
 
-        try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(bytes))) {
+        try (Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(bytes))) {
             int sheetCount = workbook.getNumberOfSheets();
             for (int s = 0; s < sheetCount; s++) {
                 Sheet sheet = workbook.getSheetAt(s);
@@ -89,7 +89,7 @@ public final class SpreadsheetTextExtractor {
                 }
             }
         } catch (IOException | RuntimeException e) {
-            throw new IllegalArgumentException("解析 .xlsx 文件失败，请确认文件格式有效: " + e.getMessage(), e);
+            throw new IllegalArgumentException("解析 Excel 文件失败，请确认文件格式有效: " + e.getMessage(), e);
         }
 
         String result = sb.toString().trim();
@@ -97,5 +97,9 @@ public final class SpreadsheetTextExtractor {
             throw new IllegalArgumentException("Excel 文件中未包含任何非空单元格内容");
         }
         return result;
+    }
+
+    public static String extractXlsx(byte[] bytes) {
+        return extractSpreadsheet(bytes);
     }
 }

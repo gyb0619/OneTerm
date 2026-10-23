@@ -119,83 +119,37 @@ export const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
   };
 
   return (
-    <section className="college-card overflow-hidden">
-      {/* 顶部控制栏与图例 */}
-      <div className="p-4 sm:p-5 border-b border-slate-200 bg-slate-50/60 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <CalendarIcon className="w-5 h-5 text-brand-600" />
-            <h2 className="text-base font-bold text-slate-900">周视图日历</h2>
-          </div>
-
-          <div className="inline-flex items-center rounded-lg border border-slate-300 bg-white p-0.5 shadow-sm">
-            <button
-              type="button"
-              onClick={() => onChangeWeekMonday(addDays(currentWeekMonday, -7))}
-              className="p-1.5 rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-              title="上一周"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="px-3 text-xs sm:text-sm font-semibold text-slate-800">
-              {currentWeekMonday} ~ {weekEndStr}
-            </span>
-            <button
-              type="button"
-              onClick={() => onChangeWeekMonday(addDays(currentWeekMonday, 7))}
-              className="p-1.5 rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-              title="下一周"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {weeklyDensity.length > 0 && (
-            <select
-              aria-label="选择学期周次"
-              value={currentWeekMonday}
-              onChange={(e) => onChangeWeekMonday(e.target.value)}
-              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500"
-            >
-              {weeklyDensity.map((w, idx) => (
-                <option key={w.weekStart} value={w.weekStart}>
-                  第 {idx + 1} 周 ({w.weekStart.slice(5)} ~ {w.weekEnd.slice(5)}) · 负载 {w.totalScore} 分
-                </option>
-              ))}
-              {!weeklyDensity.some((w) => w.weekStart === currentWeekMonday) && (
-                <option value={currentWeekMonday}>
-                  自定义周 ({currentWeekMonday.slice(5)} ~ {weekEndStr.slice(5)})
-                </option>
-              )}
-            </select>
-          )}
-
+    <section className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+      {/* 极简轻量副栏：起止日期与色彩图例 */}
+      <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-slate-800">
+            {currentWeekMonday} ~ {weekEndStr}
+          </span>
           {currentWeekDensity && (
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-brand-50 text-brand-700 border border-brand-200">
-              本周负载总分：{currentWeekDensity.totalScore} 分
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 font-medium border border-teal-200/60">
+              负载总分: {currentWeekDensity.totalScore}
             </span>
           )}
         </div>
 
         {/* 色彩语义图例 */}
-        <div className="flex flex-wrap items-center gap-2.5 text-xs text-slate-600">
+        <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
           {(['exam', 'deadline', 'course', 'activity', 'notice'] as const).map((type) => {
             const meta = EVENT_TYPE_META[type];
             return (
-              <span key={type} className="inline-flex items-center gap-1.5">
+              <span key={type} className="inline-flex items-center gap-1">
                 <span
-                  className="w-2.5 h-2.5 rounded-full"
+                  className="w-2 h-2 rounded-full"
                   style={{ backgroundColor: meta.dotColor }}
                 />
-                <span>
-                  {meta.label}({meta.weight})
-                </span>
+                <span>{meta.label}</span>
               </span>
             );
           })}
-          <span className="inline-flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
-            <span>考前复习(2)</span>
+          <span className="inline-flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-indigo-500" />
+            <span>复习</span>
           </span>
         </div>
       </div>

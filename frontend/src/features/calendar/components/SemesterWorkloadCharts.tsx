@@ -188,27 +188,27 @@ export const SemesterWorkloadCharts: React.FC<SemesterWorkloadChartsProps> = ({
   return (
     <section className="space-y-4">
       {/* 顶部醒目高亮摘要三卡片：最空的一天、最忙的一天、最忙的一周 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <button
           type="button"
           onClick={() => freestDay && onJumpToWeek(getMondayOfDate(freestDay.date))}
-          className="college-card p-4 text-left hover:border-brand-500 transition-colors flex items-start justify-between group"
+          className="bg-white rounded-xl border border-slate-200/80 p-3.5 text-left hover:border-teal-400 shadow-sm transition-all flex items-start justify-between group"
         >
           <div>
-            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200 mb-2">
-              <Coffee className="w-3.5 h-3.5" />
+            <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200 mb-1.5">
+              <Coffee className="w-3 h-3" />
               最空的一天
             </div>
-            <div className="text-lg font-bold text-slate-900">
+            <div className="text-base font-bold text-slate-900">
               {freestDay ? formatShortDate(freestDay.date) : '--'}
             </div>
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-[11px] text-slate-500 mt-0.5">
               {freestDay
-                ? `负载权重 ${freestDay.score} 分 · ${freestDay.eventCount} 项日程（推荐安排复习）`
+                ? `负载 ${freestDay.score} 分 · ${freestDay.eventCount} 项日程`
                 : '暂无统计数据'}
             </div>
           </div>
-          <span className="text-xs font-mono text-brand-600 group-hover:underline">
+          <span className="text-[11px] font-mono text-teal-600 group-hover:underline">
             {freestDay?.date}
           </span>
         </button>
@@ -216,23 +216,23 @@ export const SemesterWorkloadCharts: React.FC<SemesterWorkloadChartsProps> = ({
         <button
           type="button"
           onClick={() => busiestDay && onJumpToWeek(getMondayOfDate(busiestDay.date))}
-          className="college-card p-4 text-left hover:border-red-400 transition-colors flex items-start justify-between group"
+          className="bg-white rounded-xl border border-slate-200/80 p-3.5 text-left hover:border-rose-400 shadow-sm transition-all flex items-start justify-between group"
         >
           <div>
-            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded-full border border-red-200 mb-2">
-              <Flame className="w-3.5 h-3.5" />
+            <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200 mb-1.5">
+              <Flame className="w-3 h-3" />
               最忙的一天
             </div>
-            <div className="text-lg font-bold text-slate-900">
+            <div className="text-base font-bold text-slate-900">
               {busiestDay ? formatShortDate(busiestDay.date) : '--'}
             </div>
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-[11px] text-slate-500 mt-0.5">
               {busiestDay
-                ? `负载权重 ${busiestDay.score} 分 · 共 ${busiestDay.eventCount} 项密集日程`
+                ? `负载 ${busiestDay.score} 分 · ${busiestDay.eventCount} 项日程`
                 : '暂无统计数据'}
             </div>
           </div>
-          <span className="text-xs font-mono text-red-600 group-hover:underline">
+          <span className="text-[11px] font-mono text-rose-600 group-hover:underline">
             {busiestDay?.date}
           </span>
         </button>
@@ -240,25 +240,25 @@ export const SemesterWorkloadCharts: React.FC<SemesterWorkloadChartsProps> = ({
         <button
           type="button"
           onClick={() => busiestWeek && onJumpToWeek(busiestWeek.weekStart)}
-          className="college-card p-4 text-left hover:border-amber-400 transition-colors flex items-start justify-between group"
+          className="bg-white rounded-xl border border-slate-200/80 p-3.5 text-left hover:border-amber-400 shadow-sm transition-all flex items-start justify-between group"
         >
           <div>
-            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 mb-2">
-              <CalendarRange className="w-3.5 h-3.5" />
+            <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 mb-1.5">
+              <CalendarRange className="w-3 h-3" />
               最忙的一周
             </div>
-            <div className="text-lg font-bold text-slate-900">
+            <div className="text-base font-bold text-slate-900">
               {busiestWeek
                 ? `${busiestWeek.weekStart.slice(5)} ~ ${busiestWeek.weekEnd.slice(5)}`
                 : '--'}
             </div>
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-[11px] text-slate-500 mt-0.5">
               {busiestWeek
-                ? `周总负载 ${busiestWeek.totalScore} 分（含 ${busiestWeek.examCount} 场考试、${busiestWeek.deadlineCount} 项截止）`
+                ? `周总负载 ${busiestWeek.totalScore} 分 (${busiestWeek.examCount}场考试, ${busiestWeek.deadlineCount}项截止)`
                 : '暂无统计数据'}
             </div>
           </div>
-          <span className="text-xs font-mono text-amber-700 group-hover:underline">
+          <span className="text-[11px] font-mono text-amber-700 group-hover:underline">
             切换该周
           </span>
         </button>
@@ -266,16 +266,14 @@ export const SemesterWorkloadCharts: React.FC<SemesterWorkloadChartsProps> = ({
 
       {/* 热力图与 ECharts 周密度图双栏 */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* 学期每日负载热力图（学院青绿单色渐变） */}
-        <div className="college-card p-5 lg:col-span-7 flex flex-col justify-between">
+        {/* 学期每日负载热力图 */}
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-4 lg:col-span-7 flex flex-col justify-between">
           <div>
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">
-                  学期每日负载热力图（学院青绿单色渐变）
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  权重：考试(5) &gt; 作业截止(3) &gt; 课程/复习(2) &gt; 活动/通知(1)，点击任意日期可切换周历
+                <h3 className="text-sm font-bold text-slate-900">学期每日负载热力分布</h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  考试(5) · 作业(3) · 课程(2) · 活动(1)，点击任意日期跳转周历
                 </p>
               </div>
 
@@ -358,11 +356,11 @@ export const SemesterWorkloadCharts: React.FC<SemesterWorkloadChartsProps> = ({
         </div>
 
         {/* ECharts 每周任务密度趋势图 */}
-        <div className="college-card p-5 lg:col-span-5 flex flex-col">
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-4 lg:col-span-5 flex flex-col">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-1.5">
-              <BarChart3 className="w-4 h-4 text-brand-600" />
-              <h3 className="text-sm font-bold text-slate-900">每周任务密度与分类占比</h3>
+              <BarChart3 className="w-4 h-4 text-teal-600" />
+              <h3 className="text-sm font-bold text-slate-900">每周任务密度与分类</h3>
             </div>
             {busiestWeek && (
               <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-medium">

@@ -170,13 +170,16 @@ public class AuthService {
                         rs.getString("model")
                 )
         ));
+        java.util.Set<Long> existingIds = list.stream().map(AvailableModelDto::id).collect(java.util.stream.Collectors.toSet());
         for (RoutingLlmGateway.EnvModelInfo envModel : routingLlmGateway.getEnvChatModels()) {
-            list.add(new AvailableModelDto(
-                    envModel.id(),
-                    envModel.role(),
-                    envModel.name(),
-                    envModel.model()
-            ));
+            if (!existingIds.contains(envModel.id())) {
+                list.add(new AvailableModelDto(
+                        envModel.id(),
+                        envModel.role(),
+                        envModel.name(),
+                        envModel.model()
+                ));
+            }
         }
         return list;
     }

@@ -12,6 +12,7 @@ import {
   ArrowRight,
   ShieldAlert,
   ShieldCheck,
+  Loader2,
 } from 'lucide-react';
 import { ApiClientError, httpClient } from '../../shared/api/httpClient';
 import { useAppStore } from '../../shared/store/useAppStore';
@@ -42,7 +43,7 @@ export const AuthPage: React.FC = () => {
         }
       })
       .catch(() => {
-        // 未登录时忽略 401，同时已完成首次请求下发 XSRF-TOKEN Cookie
+        // 未登录时静默处理
       });
     return () => {
       mounted = false;
@@ -100,29 +101,38 @@ export const AuthPage: React.FC = () => {
     try {
       const profile = await httpClient.post<UserProfileResponse>('/api/auth/demo-load');
       setCurrentUser(profile);
-      setSuccessMsg('示例数据已完整载入！正在跳转学期日历...');
-      navigate('/calendar');
+      setSuccessMsg('示例数据加载完成！正在前往学期日历...');
+      setTimeout(() => {
+        navigate('/calendar');
+      }, 350);
     } catch (err) {
       if (err instanceof ApiClientError) {
         setErrorCode(err.code);
         setErrorMsg(err.message);
       } else {
-        setErrorMsg('载入示例数据失败，请稍后重试');
+        setErrorMsg('示例数据载入异常，请刷新后重试');
       }
     } finally {
       setLoadingDemo(false);
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await httpClient.post('/api/auth/logout');
+    } catch {
+      // ignore
+    }
+    setCurrentUser(null);
+    setSuccessMsg('已安全退出登录');
+  };
+
   const handleSelectModel = async (modelId: number) => {
     setSwitchingModel(true);
-    setErrorMsg(null);
-    setSuccessMsg(null);
     try {
-      const updated = await httpClient.put<UserProfileResponse>('/api/auth/preferred-model', {
-        modelId,
-      });
-      setCurrentUser(updated);
+      await httpClient.put('/api/auth/preferred-model', { modelId });
+      const profile = await httpClient.get<UserProfileResponse>('/api/auth/me');
+      setCurrentUser(profile);
       setSuccessMsg('偏好对话模型已更新');
     } catch (err) {
       if (err instanceof ApiClientError) {
@@ -135,276 +145,232 @@ export const AuthPage: React.FC = () => {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await httpClient.post('/api/auth/logout');
-    } finally {
-      setCurrentUser(null);
-      setSuccessMsg('您已安全退出登录');
-    }
-  };
-
   const isLockedError = errorCode === 'ACCOUNT_LOCKED';
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-10 bg-gradient-to-b from-teal-50/60 via-slate-50 to-slate-100">
-      <div className="max-w-4xl w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        {/* 左侧：品牌介绍与一键载入示例数据 */}
-        <div className="lg:col-span-7 college-card p-6 sm:p-8 flex flex-col justify-between bg-gradient-to-br from-teal-900 via-teal-800 to-sky-900 text-white border-0 shadow-lg">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-teal-100 text-xs font-medium mb-5">
-              <GraduationCap className="w-4 h-4" />
-              一学期 OneTerm · 智慧教务规划工作台
-            </div>
-
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-3">
-              一学期，一张图
-            </h1>
-            <p className="text-sm text-teal-100/90 leading-relaxed mb-6">
-              把零散的课表截图、考试通知与作业截止提醒整理成一张学期全景图。自动检出时间冲突、支持带原文引用的智能问答，并将核心考点可视化与考前复习排期串成完整链路。
-            </p>
-
-            <div className="bg-white/10 backdrop-blur-sm border border-white/15 rounded-xl p-5 mb-6">
-              <div className="flex items-center gap-2 text-amber-300 font-semibold text-sm mb-2">
-                <Sparkles className="w-4 h-4" />
-                评委快速验收通道（免配置 API Key）
-              </div>
-              <p className="text-xs text-teal-100/90 leading-relaxed mb-4">
-                点击下方按钮将自动使用演示学生账号（<code className="text-white font-mono">demo_student</code>）登录，并幂等写入：
-                3 门课程、3 场考试、2 项作业截止、1 项社团活动（含 2 处预置冲突）、RAG 向量切片，以及「冒泡排序」「TCP 三次握手」交互式可视化与考前复习路径。
-              </p>
-              <button
-                type="button"
-                onClick={handleDemoLoad}
-                disabled={loadingDemo}
-                className="w-full py-3 px-4 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-semibold text-sm shadow-md flex items-center justify-center gap-2 transition-colors disabled:opacity-60"
-              >
-                <Sparkles className="w-4 h-4" />
-                {loadingDemo ? '正在初始化全链路示例数据...' : '一键载入示例数据（免配置直接体验）'}
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-8 bg-slate-50/70">
+      <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6">
+        {/* 品牌标识 */}
+        <div className="text-center space-y-2">
+          <div className="w-12 h-12 rounded-xl bg-teal-600 text-white flex items-center justify-center mx-auto shadow-sm shadow-teal-600/20">
+            <GraduationCap className="w-6 h-6" />
           </div>
-
-          <div className="grid grid-cols-3 gap-3 text-xs text-teal-100/80 pt-4 border-t border-white/10">
-            <div>
-              <div className="font-semibold text-white">防暴力破解</div>
-              <div>连续失败 5 次锁定 10 分钟</div>
-            </div>
-            <div>
-              <div className="font-semibold text-white">HttpOnly + CSRF</div>
-              <div>服务端安全会话与租户隔离</div>
-            </div>
-            <div>
-              <div className="font-semibold text-white">Token 额度保护</div>
-              <div>按日统计用量与模型切换</div>
-            </div>
-          </div>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">一学期 OneTerm</h1>
+          <p className="text-xs text-slate-500">
+            智慧教务规划工作台 · 一学期，一张图
+          </p>
         </div>
 
-        {/* 右侧：登录表单与当前账号模型偏好设置 */}
-        <div className="lg:col-span-5 college-card p-6 sm:p-8 flex flex-col justify-between">
+        {/* 评委/体验免配置直接体验通道 */}
+        <div className="bg-teal-50/70 border border-teal-200/70 rounded-xl p-4 text-center space-y-2.5">
+          <div className="text-xs font-semibold text-teal-900 flex items-center justify-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+            快速验收通道（免配置直接体验）
+          </div>
+          <p className="text-[11px] text-teal-700/90 leading-relaxed">
+            一键载入标准示例（课表、考试、冲突预警、RAG 切片与可视化考点）
+          </p>
+          <button
+            type="button"
+            onClick={handleDemoLoad}
+            disabled={loadingDemo}
+            className="w-full py-2.5 px-4 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-medium text-xs shadow-sm flex items-center justify-center gap-1.5 transition disabled:opacity-60"
+          >
+            {loadingDemo ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="w-3.5 h-3.5" />
+            )}
+            {loadingDemo ? '正在初始化全套示例数据...' : '一键载入示例数据并登录'}
+          </button>
+        </div>
+
+        <div className="relative flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-200" />
+          </div>
+          <span className="relative px-3 bg-white text-[11px] text-slate-400">
+            或使用已有账号登录
+          </span>
+        </div>
+
+        {/* 错误提示 */}
+        {errorMsg && (
+          <div
+            role="alert"
+            className={`p-3 rounded-lg border text-xs flex items-start gap-2 ${
+              isLockedError
+                ? 'bg-rose-50 border-rose-200 text-rose-800'
+                : 'bg-amber-50 border-amber-200 text-amber-800'
+            }`}
+          >
+            {isLockedError ? (
+              <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            )}
+            <div>
+              <div className="font-semibold">{isLockedError ? '账号已锁定' : '提示'}</div>
+              <div>{errorMsg}</div>
+            </div>
+          </div>
+        )}
+
+        {/* 成功提示 */}
+        {successMsg && (
+          <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{successMsg}</span>
+          </div>
+        )}
+
+        {/* 登录表单 */}
+        <form onSubmit={handleLogin} className="space-y-3.5">
           <div>
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">账号登录</h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  系统不开放公开注册，账号由管理员统一分配
-                </p>
+            <label
+              htmlFor="login-username"
+              className="block text-xs font-medium text-slate-700 mb-1"
+            >
+              用户名
+            </label>
+            <div className="relative">
+              <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                id="login-username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="admin 或用户账号"
+                autoComplete="username"
+                className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 bg-white"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label
+              htmlFor="login-password"
+              className="block text-xs font-medium text-slate-700 mb-1"
+            >
+              密码
+            </label>
+            <div className="relative">
+              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                id="login-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="请输入密码"
+                autoComplete="current-password"
+                className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 bg-white"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loadingLogin}
+            className="w-full py-2.5 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs shadow-sm flex items-center justify-center gap-1.5 transition disabled:opacity-60"
+          >
+            {loadingLogin ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+            {loadingLogin ? '验证中...' : '登录'}
+          </button>
+        </form>
+
+        {/* 当前登录状态卡片（若已登录） */}
+        {currentUser && (
+          <div className="pt-4 border-t border-slate-100 space-y-3 text-xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
+                  {currentUser.role}
+                </span>
+                <span className="font-semibold text-slate-900">{currentUser.username}</span>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center">
-                <Lock className="w-5 h-5" />
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="text-slate-400 hover:text-rose-600 flex items-center gap-1"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                退出
+              </button>
+            </div>
+
+            <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/70 space-y-1">
+              <div className="flex justify-between text-slate-500 text-[11px]">
+                <span>今日 Token 额度</span>
+                <span className="font-mono">
+                  {currentUser.todayTokensUsed} / {currentUser.dailyTokenLimit}
+                </span>
+              </div>
+              <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-teal-600 rounded-full"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      Math.round(
+                        (currentUser.todayTokensUsed /
+                          Math.max(1, currentUser.dailyTokenLimit)) *
+                          100
+                      )
+                    )}%`,
+                  }}
+                />
               </div>
             </div>
 
-            {errorMsg && (
-              <div
-                role="alert"
-                className={`mb-4 p-3.5 rounded-lg border text-xs flex items-start gap-2.5 ${
-                  isLockedError
-                    ? 'bg-rose-50 border-rose-300 text-rose-800'
-                    : 'bg-amber-50 border-amber-200 text-amber-800'
-                }`}
-              >
-                {isLockedError ? (
-                  <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                ) : (
-                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                )}
-                <div>
-                  <div className="font-semibold">
-                    {isLockedError ? '账号处于安全锁定期 (HTTP 423)' : '认证提示'}
-                  </div>
-                  <div className="mt-0.5">{errorMsg}</div>
-                </div>
+            {models.length > 0 && (
+              <div>
+                <label className="block text-[11px] text-slate-500 mb-1">切换偏好模型</label>
+                <select
+                  value={currentUser.preferredModelId ?? ''}
+                  disabled={switchingModel}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    if (!isNaN(val) && val !== 0) {
+                      handleSelectModel(val);
+                    }
+                  }}
+                  className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+                >
+                  <option value="">默认模型 ({models[0]?.name})</option>
+                  {models.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
 
-            {successMsg && (
-              <div className="mb-4 p-3.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>{successMsg}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label
-                  htmlFor="login-username"
-                  className="block text-xs font-medium text-slate-700 mb-1.5"
-                >
-                  用户名
-                </label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    id="login-username"
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="请输入管理员或学生账号"
-                    autoComplete="username"
-                    className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="login-password"
-                  className="block text-xs font-medium text-slate-700 mb-1.5"
-                >
-                  登录密码
-                </label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    id="login-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="请输入登录密码"
-                    autoComplete="current-password"
-                    className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                  />
-                </div>
-              </div>
-
+            <div className="flex gap-2 pt-1">
               <button
-                type="submit"
-                disabled={loadingLogin}
-                className="w-full btn-primary py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-medium"
+                type="button"
+                onClick={() => navigate('/calendar')}
+                className="flex-1 btn-primary bg-teal-600 hover:bg-teal-700 py-2 text-xs"
               >
-                {loadingLogin ? '正在验证身份...' : '登录系统'}
+                进入学期日历
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
-            </form>
-
-            {/* 当前已登录会话与对话模型切换卡片 */}
-            {currentUser && (
-              <div className="mt-6 pt-5 border-t border-slate-200 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200">
-                      {currentUser.role === 'ADMIN' ? '管理员 ADMIN' : '学生 USER'}
-                    </span>
-                    <span className="text-sm font-semibold text-slate-800">
-                      {currentUser.username}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-rose-600"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    退出
-                  </button>
-                </div>
-
-                <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-200">
-                  <div className="flex justify-between mb-1">
-                    <span>今日 Token 用量</span>
-                    <span className="font-mono font-medium">
-                      {currentUser.todayTokensUsed.toLocaleString()} /{' '}
-                      {currentUser.dailyTokenLimit.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-teal-600 rounded-full transition-all"
-                      style={{
-                        width: `${Math.min(
-                          100,
-                          Math.round(
-                            (currentUser.todayTokensUsed /
-                              Math.max(1, currentUser.dailyTokenLimit)) *
-                              100
-                          )
-                        )}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-1.5 text-xs font-medium text-slate-700 mb-1.5">
-                    <Cpu className="w-3.5 h-3.5 text-teal-600" />
-                    切换当前对话模型（仅展示管理员已启用模型）
-                  </label>
-                  {models.length === 0 ? (
-                    <div className="text-xs text-slate-500 bg-amber-50/70 border border-amber-200 rounded-lg px-3 py-2">
-                      当前未配置或未启用外部对话模型，系统自动运行于{' '}
-                      <span className="font-medium text-amber-800">Mock 演示模式</span>。
-                    </div>
-                  ) : (
-                    <select
-                      value={currentUser.preferredModelId ?? ''}
-                      disabled={switchingModel}
-                      onChange={(e) => {
-                        const val = Number(e.target.value);
-                        if (!isNaN(val) && val !== 0) {
-                          handleSelectModel(val);
-                        }
-                      }}
-                      className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    >
-                      <option value="">默认启用模型 ({models[0]?.name})</option>
-                      {models.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.name} ({m.model})
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-
-                <div className="flex gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => navigate('/calendar')}
-                    className="flex-1 btn-secondary py-1.5 text-xs"
-                  >
-                    进入学期日历
-                  </button>
-                  {currentUser.role === 'ADMIN' && (
-                    <button
-                      type="button"
-                      onClick={() => navigate('/admin')}
-                      className="flex-1 btn-secondary py-1.5 text-xs text-teal-700 border-teal-200 bg-teal-50/50"
-                    >
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      管理后台
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
+              {currentUser.role === 'ADMIN' && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/admin')}
+                  className="btn-secondary py-2 px-3 text-xs"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
+                  管理
+                </button>
+              )}
+            </div>
           </div>
+        )}
 
-          <div className="mt-6 pt-4 border-t border-slate-100 text-[11px] text-slate-400 flex items-center justify-between">
-            <span>默认管理员由环境变量 ONETERM_ADMIN_* 初始化</span>
-            <span>时区：Asia/Shanghai</span>
-          </div>
+        <div className="pt-2 text-center text-[11px] text-slate-400">
+          时区：Asia/Shanghai · 安全沙箱隔离
         </div>
       </div>
     </div>

@@ -7,9 +7,59 @@ export interface FileExtractResponse {
   extractedText: string;
 }
 
+export interface TimetableSlotDto {
+  courseName: string;
+  dayOfWeek: number;
+  dayName: string;
+  startSection: number;
+  endSection: number;
+  startWeek: number;
+  endWeek: number;
+  location: string;
+  teacher: string;
+  rawCell: string;
+}
+
+export interface TimetableParseResult {
+  semester: {
+    startDate: string;
+    endDate: string;
+    totalWeeks: number;
+  } | null;
+  slots: TimetableSlotDto[];
+  expandedEvents: EventInputDto[];
+}
+
 export interface SimpleSuccessResponse {
   success: boolean;
   message?: string;
+}
+
+/**
+ * 上传课表文件（.xls / .xlsx）结合学期周次展开为具体日程
+ */
+export async function parseTimetableFile(
+  file?: File | null,
+  options?: {
+    semesterStartDate?: string;
+    startWeek?: number;
+    endWeek?: number;
+  }
+): Promise<TimetableParseResult> {
+  const formData = new FormData();
+  if (file) {
+    formData.append('file', file);
+  }
+  if (options?.semesterStartDate) {
+    formData.append('semesterStartDate', options.semesterStartDate);
+  }
+  if (options?.startWeek !== undefined) {
+    formData.append('startWeek', String(options.startWeek));
+  }
+  if (options?.endWeek !== undefined) {
+    formData.append('endWeek', String(options.endWeek));
+  }
+  return httpClient.post<TimetableParseResult>('/api/extract/timetable', formData);
 }
 
 /**

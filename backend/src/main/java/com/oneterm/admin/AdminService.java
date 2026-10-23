@@ -201,17 +201,20 @@ public class AdminService {
                         rs.getString("updated_at")
                 )
         ));
+        Set<Long> existingIds = list.stream().map(LlmConfigDto::id).collect(java.util.stream.Collectors.toSet());
         for (RoutingLlmGateway.EnvModelInfo envModel : routingLlmGateway.getAllEnvModels()) {
-            list.add(new LlmConfigDto(
-                    envModel.id(),
-                    envModel.role(),
-                    envModel.name(),
-                    envModel.baseUrl(),
-                    envModel.model(),
-                    envModel.apiKeyMasked(),
-                    true,
-                    "系统环境变量"
-            ));
+            if (!existingIds.contains(envModel.id())) {
+                list.add(new LlmConfigDto(
+                        envModel.id(),
+                        envModel.role(),
+                        envModel.name(),
+                        envModel.baseUrl(),
+                        envModel.model(),
+                        envModel.apiKeyMasked(),
+                        true,
+                        "系统环境变量"
+                ));
+            }
         }
         return list;
     }
@@ -246,39 +249,80 @@ public class AdminService {
 
     @Transactional
     public LlmConfigDto updateLlmConfig(long id, SaveLlmConfigRequest request) {
-        if (id < 0) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "系统环境变量模型由系统环境自动管理，无法直接在此修改");
-        }
         validateLlmConfigRequest(request, false);
-        List<String> existingKeys = jdbcTemplate.query(
-                "SELECT api_key_encrypted FROM llm_config WHERE id = ?",
-                (rs, rowNum) -> rs.getString("api_key_encrypted"),
-                id
-        );
-        if (existingKeys.isEmpty()) {
-            throw new BusinessException(ErrorCode.NOT_FOUND, "模型配置不存在");
-        }
+        String encryptedKey;
 
-        String encryptedKey = existingKeys.get(0);
-        if (request.apiKey() != null && !request.apiKey().isBlank()) {
-            encryptedKey = aesGcmCrypto.encrypt(request.apiKey().trim());
+        if (id < 0) {
+            String rawKey = (request.apiKey() != null && !request.apiKey().isBlank())
+                    ? request.apiKey().trim()
+                    : routingLlmGateway.getRawEnvKeyForVirtualId(id);
+            if (rawKey == null || rawKey.isBlank()) {
+                List<String> existing = jdbcTemplate.query(
+                        "SELECT api_key_encrypted FROM llm_config WHERE id = ?",
+                        (rs, rowNum) -> rs.getString("api_key_encrypted"),
+                        id
+                );
+                if (existing.isEmpty()) {
+                    throw new BusinessException(ErrorCode.BAD_REQUEST, "未检测到系统环境变量密钥，请手动填写 API Key");
+                }
+                encryptedKey = existing.get(0);
+            } else {
+                encryptedKey = aesGcmCrypto.encrypt(rawKey);
+            }
+        } else {
+            List<String> existingKeys = jdbcTemplate.query(
+                    "SELECT api_key_encrypted FROM llm_config WHERE id = ?",
+                    (rs, rowNum) -> rs.getString("api_key_encrypted"),
+                    id
+            );
+            if (existingKeys.isEmpty()) {
+                throw new BusinessException(ErrorCode.NOT_FOUND, "指定的模型配置不存在");
+            }
+            encryptedKey = existingKeys.get(0);
+            if (request.apiKey() != null && !request.apiKey().isBlank()) {
+                encryptedKey = aesGcmCrypto.encrypt(request.apiKey().trim());
+            }
         }
 
         String role = request.role().trim().toLowerCase(Locale.ROOT);
         boolean enabled = request.enabled() == null || request.enabled();
         String nowIso = nowShanghaiIso();
 
-        jdbcTemplate.update(
-                "UPDATE llm_config SET role = ?, name = ?, base_url = ?, model = ?, api_key_encrypted = ?, enabled = ?, updated_at = ? WHERE id = ?",
-                role,
-                request.name().trim(),
-                request.baseUrl().trim(),
-                request.model().trim(),
-                encryptedKey,
-                enabled ? 1 : 0,
-                nowIso,
-                id
-        );
+        if (id < 0) {
+            jdbcTemplate.update("""
+                    INSERT INTO llm_config (id, role, name, base_url, model, api_key_encrypted, enabled, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(id) DO UPDATE SET
+                        role = excluded.role,
+                        name = excluded.name,
+                        base_url = excluded.base_url,
+                        model = excluded.model,
+                        api_key_encrypted = excluded.api_key_encrypted,
+                        enabled = excluded.enabled,
+                        updated_at = excluded.updated_at
+                    """,
+                    id,
+                    role,
+                    request.name().trim(),
+                    request.baseUrl().trim(),
+                    request.model().trim(),
+                    encryptedKey,
+                    enabled ? 1 : 0,
+                    nowIso
+            );
+        } else {
+            jdbcTemplate.update(
+                    "UPDATE llm_config SET role = ?, name = ?, base_url = ?, model = ?, api_key_encrypted = ?, enabled = ?, updated_at = ? WHERE id = ?",
+                    role,
+                    request.name().trim(),
+                    request.baseUrl().trim(),
+                    request.model().trim(),
+                    encryptedKey,
+                    enabled ? 1 : 0,
+                    nowIso,
+                    id
+            );
+        }
 
         if (!enabled) {
             jdbcTemplate.update(
@@ -293,7 +337,8 @@ public class AdminService {
     @Transactional
     public void deleteLlmConfig(long id) {
         if (id < 0) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "系统环境变量模型由系统环境自动管理，无法直接删除");
+            jdbcTemplate.update("DELETE FROM llm_config WHERE id = ?", id);
+            return;
         }
         getLlmConfigByIdOrThrow(id);
         jdbcTemplate.update("UPDATE users SET preferred_model_id = NULL WHERE preferred_model_id = ?", id);

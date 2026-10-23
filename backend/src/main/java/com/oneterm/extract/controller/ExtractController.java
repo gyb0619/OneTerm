@@ -45,6 +45,22 @@ public class ExtractController {
     }
 
     /**
+     * POST /api/extract/timetable
+     * 上传周次课表文件（.xls / .xlsx），结合学期开学日期与周次范围自动计算并展开日程。
+     */
+    @PostMapping(value = "/timetable")
+    public ResponseEntity<com.oneterm.extract.core.TimetableWeekParser.ParseResult> parseTimetable(
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "semesterStartDate", required = false) String semesterStartDate,
+            @RequestParam(value = "startWeek", required = false) Integer startWeek,
+            @RequestParam(value = "endWeek", required = false) Integer endWeek
+    ) {
+        long userId = currentUserProvider.requireCurrentUserId();
+        var result = extractService.parseTimetable(userId, file, semesterStartDate, startWeek, endWeek);
+        return ResponseEntity.ok(result);
+    }
+
+    /**
      * POST /api/extract/stream
      * 从教务文本流式抽取结构化事件（SSE）。
      */

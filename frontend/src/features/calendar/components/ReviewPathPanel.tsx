@@ -78,28 +78,26 @@ export const ReviewPathPanel: React.FC<ReviewPathPanelProps> = ({
   };
 
   return (
-    <section className="college-card p-5 space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Wand2 className="w-5 h-5 text-brand-600" />
-            <h2 className="text-base font-bold text-slate-900">
-              考前复习路径规划（倒排与负载均衡）
-            </h2>
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
-            为考试或课程添加核心复习知识点，点击「自动生成考前复习路径」即可按考试日期倒排至考前空闲日、自动避开冲突日并写回日历。
-          </p>
+    <section className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 sm:p-5 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+        <div className="flex items-center gap-2">
+          <Wand2 className="w-4 h-4 text-teal-600" />
+          <h2 className="text-sm font-bold text-slate-900">
+            考前复习路径规划
+          </h2>
+          <span className="text-[11px] text-slate-400">
+            按考试日期自动倒排并均衡每日复习负载
+          </span>
         </div>
 
         <button
           type="button"
           disabled={scheduling || reviewTopics.length === 0}
           onClick={onScheduleAll}
-          className="btn-primary shrink-0"
+          className="btn-primary bg-teal-600 hover:bg-teal-700 py-1.5 px-3 text-xs shrink-0"
         >
-          <Wand2 className="w-4 h-4" />
-          {scheduling ? '正在倒排规划...' : '自动生成考前复习路径'}
+          <Wand2 className="w-3.5 h-3.5" />
+          {scheduling ? '正在规划...' : '自动生成考前复习路径'}
         </button>
       </div>
 

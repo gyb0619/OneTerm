@@ -5,6 +5,7 @@ import com.oneterm.common.ErrorCode;
 import com.oneterm.common.SseEventPublisher;
 import com.oneterm.extract.core.EventJsonParser;
 import com.oneterm.extract.core.SpreadsheetTextExtractor;
+import com.oneterm.extract.core.TimetableWeekParser;
 import com.oneterm.extract.dto.EventInputDto;
 import com.oneterm.extract.dto.FileExtractResponse;
 import com.oneterm.llm.ChatMessage;
@@ -76,9 +77,9 @@ public class ExtractService {
                 String text = SpreadsheetTextExtractor.extractTxt(bytes);
                 return new FileExtractResponse(safeFileName, "txt", text);
             }
-            if (lowerName.endsWith(".xlsx")) {
-                String text = SpreadsheetTextExtractor.extractXlsx(bytes);
-                return new FileExtractResponse(safeFileName, "xlsx", text);
+            if (lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls")) {
+                String text = SpreadsheetTextExtractor.extractSpreadsheet(bytes);
+                return new FileExtractResponse(safeFileName, lowerName.endsWith(".xls") ? "xls" : "xlsx", text);
             }
             if (isSupportedImageExtension(lowerName)) {
                 String mimeType = resolveImageMimeType(lowerName, contentType);
@@ -250,6 +251,45 @@ public class ExtractService {
             return "image/webp";
         }
         return "image/jpeg";
+    }
+
+    public TimetableWeekParser.ParseResult parseTimetable(
+            long userId,
+            MultipartFile file,
+            String customStartDateStr,
+            Integer filterStartWeek,
+            Integer filterEndWeek
+    ) {
+        byte[] bytes = null;
+        if (file != null && !file.isEmpty()) {
+            try {
+                bytes = file.getBytes();
+            } catch (IOException e) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "读取课表文件失败");
+            }
+        } else {
+            java.nio.file.Path p1 = java.nio.file.Path.of("data/计算机(中加)2501课表 - 修改.xls");
+            java.nio.file.Path p2 = java.nio.file.Path.of("../data/计算机(中加)2501课表 - 修改.xls");
+            try {
+                if (java.nio.file.Files.exists(p1)) {
+                    bytes = java.nio.file.Files.readAllBytes(p1);
+                } else if (java.nio.file.Files.exists(p2)) {
+                    bytes = java.nio.file.Files.readAllBytes(p2);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        if (bytes == null || bytes.length == 0) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "未检测到课表文件，请上传 .xls 或 .xlsx 文件");
+        }
+        java.time.LocalDate customStartDate = null;
+        if (customStartDateStr != null && !customStartDateStr.isBlank()) {
+            try {
+                customStartDate = java.time.LocalDate.parse(customStartDateStr.trim());
+            } catch (Exception ignored) {
+            }
+        }
+        return TimetableWeekParser.parseFromSpreadsheet(bytes, customStartDate, filterStartWeek, filterEndWeek);
     }
 
     private static String loadSystemPrompt() {

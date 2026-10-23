@@ -359,6 +359,10 @@ public class RoutingLlmGateway implements LlmGateway {
     }
 
     public Optional<LlmConfigRecord> getDeepSeekEnvConfig() {
+        Optional<LlmConfigRecord> dbOverride = findDbConfigById(ENV_MODEL_DEEPSEEK_ID);
+        if (dbOverride != null) {
+            return dbOverride;
+        }
         String key = getEnv("DEEPSEEK_API", "DEEPSEEK_API_KEY");
         if (key == null || key.isBlank()) {
             return Optional.empty();
@@ -377,6 +381,10 @@ public class RoutingLlmGateway implements LlmGateway {
     }
 
     public Optional<LlmConfigRecord> getOpenAiEnvConfig() {
+        Optional<LlmConfigRecord> dbOverride = findDbConfigById(ENV_MODEL_OPENAI_ID);
+        if (dbOverride != null) {
+            return dbOverride;
+        }
         String key = getEnv("OPENAI_API", "OPENAI_API_KEY");
         if (key == null || key.isBlank()) {
             return Optional.empty();
@@ -395,6 +403,10 @@ public class RoutingLlmGateway implements LlmGateway {
     }
 
     public Optional<LlmConfigRecord> getVisionEnvConfig() {
+        Optional<LlmConfigRecord> dbOverride = findDbConfigById(ENV_MODEL_VISION_ID);
+        if (dbOverride != null) {
+            return dbOverride;
+        }
         String key = getEnv("VISION_API", "VISION_API_KEY", "OPENAI_API_KEY");
         if (key == null || key.isBlank()) {
             return Optional.empty();
@@ -413,6 +425,10 @@ public class RoutingLlmGateway implements LlmGateway {
     }
 
     public Optional<LlmConfigRecord> getEmbeddingEnvConfig() {
+        Optional<LlmConfigRecord> dbOverride = findDbConfigById(ENV_MODEL_EMBEDDING_ID);
+        if (dbOverride != null) {
+            return dbOverride;
+        }
         String key = getEnv("EMBEDDING_API", "EMBEDDING_API_KEY", "OPENAI_API_KEY");
         if (key == null || key.isBlank()) {
             return Optional.empty();
@@ -428,6 +444,47 @@ public class RoutingLlmGateway implements LlmGateway {
                 key.trim(),
                 true
         ));
+    }
+
+    private Optional<LlmConfigRecord> findDbConfigById(long id) {
+        List<LlmConfigRecord> rows = jdbcTemplate.query(
+                "SELECT id, role, name, base_url, model, api_key_encrypted, enabled FROM llm_config WHERE id = ?",
+                (rs, rowNum) -> {
+                    boolean enabled = rs.getInt("enabled") == 1;
+                    if (!enabled) return null;
+                    return new LlmConfigRecord(
+                            rs.getLong("id"),
+                            rs.getString("role"),
+                            rs.getString("name"),
+                            rs.getString("base_url"),
+                            rs.getString("model"),
+                            rs.getString("api_key_encrypted"),
+                            false
+                    );
+                },
+                id
+        );
+        if (rows.isEmpty()) {
+            return null; // 未在数据库中自定义，回退到系统环境变量
+        }
+        LlmConfigRecord rec = rows.get(0);
+        return rec != null ? Optional.of(rec) : Optional.empty();
+    }
+
+    public String getRawEnvKeyForVirtualId(long id) {
+        if (id == ENV_MODEL_DEEPSEEK_ID) {
+            return getEnv("DEEPSEEK_API", "DEEPSEEK_API_KEY");
+        }
+        if (id == ENV_MODEL_OPENAI_ID) {
+            return getEnv("OPENAI_API", "OPENAI_API_KEY");
+        }
+        if (id == ENV_MODEL_VISION_ID) {
+            return getEnv("VISION_API", "VISION_API_KEY", "OPENAI_API_KEY");
+        }
+        if (id == ENV_MODEL_EMBEDDING_ID) {
+            return getEnv("EMBEDDING_API", "EMBEDDING_API_KEY", "OPENAI_API_KEY");
+        }
+        return null;
     }
 
     public static String getEnv(String... names) {

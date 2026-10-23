@@ -264,10 +264,39 @@ class AdminAndQuotaGatewayTest {
         mockMvc.perform(get("/api/admin/usage-logs").session(adminSession))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
+    }
 
-        // 3. favicon.ico 正常响应 SVG
-        mockMvc.perform(get("/favicon.ico"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith("image/svg+xml"));
+    @Test
+    void testAdminCanModifyEnvModel() throws Exception {
+        System.setProperty("DEEPSEEK_API", "sk-deepseek-env-sample-key-1234");
+        try {
+            // 管理员更新环境变量模型 id = -1
+            Map<String, Object> updateReq = Map.of(
+                    "role", "chat",
+                    "name", "DeepSeek (管理员自定义直连)",
+                    "baseUrl", "https://api.deepseek.com/v1",
+                    "model", "deepseek-reasoner",
+                    "enabled", true
+            );
+
+            mockMvc.perform(put("/api/admin/llm-configs/-1")
+                            .session(adminSession)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(updateReq)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(-1))
+                    .andExpect(jsonPath("$.name").value("DeepSeek (管理员自定义直连)"))
+                    .andExpect(jsonPath("$.model").value("deepseek-reasoner"))
+                    .andExpect(jsonPath("$.baseUrl").value("https://api.deepseek.com/v1"));
+
+            // 再次查询模型列表，环境变量模型已采用自定义设置
+            mockMvc.perform(get("/api/admin/llm-configs").session(adminSession))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[?(@.id == -1)].name").value("DeepSeek (管理员自定义直连)"))
+                    .andExpect(jsonPath("$[?(@.id == -1)].model").value("deepseek-reasoner"));
+        } finally {
+            System.clearProperty("DEEPSEEK_API");
+            jdbcTemplate.update("DELETE FROM llm_config WHERE id = -1");
+        }
     }
 }

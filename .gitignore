@@ -44,3 +44,4 @@ Thumbs.db
 
 # Local raw prompt staging directory
 docx/
+data

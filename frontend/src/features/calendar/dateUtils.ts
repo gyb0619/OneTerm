@@ -146,3 +146,29 @@ function formatUtcDate(dt: Date): string {
   const dd = String(dt.getUTCDate()).padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`;
 }
+
+export const DEFAULT_SEMESTER_START = '2026-08-24';
+export const DEFAULT_TOTAL_WEEKS = 21;
+
+/**
+ * 根据日期计算其属于学期的第几周（以 semesterStart 周一为第 1 周）
+ */
+export function getSemesterWeekNumber(dateStr: string, semesterStart = DEFAULT_SEMESTER_START): number {
+  if (!dateStr) return 1;
+  const monday = getMondayOfDate(dateStr);
+  const startMonday = getMondayOfDate(semesterStart);
+  const [y1, m1, d1] = monday.split('-').map(Number);
+  const [y0, m0, d0] = startMonday.split('-').map(Number);
+  const ms1 = Date.UTC(y1, m1 - 1, d1);
+  const ms0 = Date.UTC(y0, m0 - 1, d0);
+  const diffWeeks = Math.round((ms1 - ms0) / (7 * 24 * 60 * 60 * 1000));
+  return Math.max(1, diffWeeks + 1);
+}
+
+/**
+ * 根据学期周次获取对应周的周一日期
+ */
+export function getDateOfSemesterWeek(weekNum: number, semesterStart = DEFAULT_SEMESTER_START): string {
+  const startMonday = getMondayOfDate(semesterStart);
+  return addDays(startMonday, (Math.max(1, weekNum) - 1) * 7);
+}
