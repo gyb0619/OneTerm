@@ -1,5 +1,5 @@
-import React from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   Calendar,
   FileUp,
@@ -7,11 +7,34 @@ import {
   Sparkles,
   ShieldCheck,
   GraduationCap,
+  LogOut,
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { httpClient } from '../api/httpClient';
+import type { UserProfileResponse } from '../types/api';
 
 export const AppLayout: React.FC = () => {
-  const { currentUser } = useAppStore();
+  const { currentUser, setCurrentUser } = useAppStore();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    httpClient
+      .get<UserProfileResponse>('/api/auth/me')
+      .then((user) => setCurrentUser(user))
+      .catch(() => {
+        setCurrentUser(null);
+      });
+  }, [setCurrentUser]);
+
+  const handleLogout = async () => {
+    try {
+      await httpClient.post('/api/auth/logout');
+    } catch {
+      // ignore
+    }
+    setCurrentUser(null);
+    navigate('/login');
+  };
 
   const navItems = [
     { to: '/extract', label: '导入与抽取', icon: FileUp },
@@ -71,10 +94,25 @@ export const AppLayout: React.FC = () => {
               </span>
             )}
             {currentUser ? (
-              <span className="font-medium text-slate-700">
-                {currentUser.username} ({currentUser.todayTokensUsed}/
-                {currentUser.dailyTokenLimit} tokens)
-              </span>
+              <div className="flex items-center gap-2">
+                <NavLink
+                  to="/login"
+                  className="font-medium text-slate-700 hover:text-brand-600 transition-colors"
+                  title="查看账号与模型偏好"
+                >
+                  {currentUser.username} ({currentUser.todayTokensUsed}/
+                  {currentUser.dailyTokenLimit} tokens)
+                </NavLink>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                  title="退出登录"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">退出</span>
+                </button>
+              </div>
             ) : (
               <NavLink to="/login" className="btn-primary py-1.5 px-3 text-xs">
                 登录体验
