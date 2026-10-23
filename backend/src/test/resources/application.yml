@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: oneterm-backend-test
+  datasource:
+    url: jdbc:sqlite:target/test-oneterm.db
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      maximum-pool-size: 1
+      connection-test-query: SELECT 1
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  jackson:
+    time-zone: Asia/Shanghai
+
+oneterm:
+  mock: true
+  secret-key: test-only-oneterm-aes256-secret-key-32b
+  admin:
+    username: admin
+    password: AdminTest@123
