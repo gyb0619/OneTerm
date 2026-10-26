@@ -220,7 +220,7 @@ export const AppLayout: React.FC = () => {
 
       {/* 主工作区 */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-5">
-        <div key={location.pathname} className="animate-fade-slide-up">
+        <div key={location.pathname} className="animate-fade-in">
           <Outlet />
         </div>
       </main>

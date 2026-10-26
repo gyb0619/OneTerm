@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -460,8 +461,9 @@ export const QaPage: React.FC = () => {
       )}
 
       {/* 侧滑历史记录抽屉 */}
-      {isHistoryOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/30 backdrop-blur-xs transition-opacity animate-in fade-in">
+      {isHistoryOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/30 backdrop-blur-xs transition-opacity animate-in fade-in">
           <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col border-l border-slate-200">
             {/* 抽屉标题栏 */}
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
@@ -540,7 +542,8 @@ export const QaPage: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* 对话列表区 */}

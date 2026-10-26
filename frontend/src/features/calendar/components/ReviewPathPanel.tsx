@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Sparkles,
   Plus,
@@ -645,8 +646,9 @@ export const ReviewPathPanel: React.FC<ReviewPathPanelProps> = ({
       )}
 
       {/* 智能提炼考点体系弹窗（经用户知情同意后生成与导入） */}
-      {consentModalOpen && modalSubject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in">
+      {consentModalOpen && modalSubject &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full border border-slate-200 overflow-hidden flex flex-col max-h-[88vh] animate-scale-in">
             {/* 弹窗头部 */}
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-teal-50/50">
@@ -770,7 +772,8 @@ export const ReviewPathPanel: React.FC<ReviewPathPanelProps> = ({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </section>
   );

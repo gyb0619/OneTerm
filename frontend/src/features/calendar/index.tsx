@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   Download,
@@ -494,8 +495,9 @@ export const CalendarPage: React.FC = () => {
       )}
 
       {/* 冲突预警轻量弹出层 Modal */}
-      {showConflictModal && overview && overview.conflicts.length > 0 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
+      {showConflictModal && overview && overview.conflicts.length > 0 &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-amber-50/50">
               <div className="flex items-center gap-2">
@@ -609,7 +611,8 @@ export const CalendarPage: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
