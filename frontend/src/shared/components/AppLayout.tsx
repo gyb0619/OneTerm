@@ -19,10 +19,14 @@ export const AppLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 1. 路由变化或初次挂载时，静默拉取并刷新当前用户及其最新 Token 额度
+  // 1. 路由变化或初次挂载时，静默拉取并刷新当前用户；若未登录则平滑重定向到登录页
   useEffect(() => {
-    void refreshCurrentUser();
-  }, [location.pathname, refreshCurrentUser]);
+    void refreshCurrentUser().then((user) => {
+      if (!user && location.pathname !== '/login') {
+        navigate('/login', { replace: true });
+      }
+    });
+  }, [location.pathname, refreshCurrentUser, navigate]);
 
   // 2. 窗口重获焦点或页面切回前台时自动刷新额度，并设置 15 秒定时轮询保活
   useEffect(() => {

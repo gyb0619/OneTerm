@@ -34,7 +34,7 @@ public class VisualizeController {
      * POST /api/visualize/generate/stream
      * 流式生成知识点交互式可视化单文件 HTML（SSE）。
      */
-    @PostMapping(path = "/generate/stream", produces = "text/event-stream;charset=UTF-8")
+    @PostMapping(path = "/generate/stream")
     public SseEmitter generateStream(@RequestBody(required = false) GenerateVisualizationRequest request) {
         return visualizeService.streamGenerate(request);
     }

@@ -64,7 +64,7 @@ public class ExtractController {
      * POST /api/extract/stream
      * 从教务文本流式抽取结构化事件（SSE）。
      */
-    @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @PostMapping(value = "/stream")
     public SseEmitter streamExtract(@RequestBody(required = false) StreamExtractRequest request) {
         long userId = currentUserProvider.requireCurrentUserId();
         if (request == null || request.text() == null || request.text().isBlank()) {

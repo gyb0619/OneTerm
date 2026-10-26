@@ -42,8 +42,7 @@ public class QaController {
      */
     @PostMapping(
             value = "/ask/stream",
-            consumes = MediaType.APPLICATION_JSON_VALUE,
-            produces = "text/event-stream;charset=UTF-8"
+            consumes = MediaType.APPLICATION_JSON_VALUE
     )
     public SseEmitter askStream(@RequestBody(required = false) QaAskRequest request) {
         return qaService.streamAskForCurrentUser(request);

@@ -268,15 +268,29 @@ public class ExtractService {
                 throw new BusinessException(ErrorCode.BAD_REQUEST, "读取课表文件失败");
             }
         } else {
-            java.nio.file.Path p1 = java.nio.file.Path.of("data/计算机(中加)2501课表 - 修改.xls");
-            java.nio.file.Path p2 = java.nio.file.Path.of("../data/计算机(中加)2501课表 - 修改.xls");
-            try {
-                if (java.nio.file.Files.exists(p1)) {
-                    bytes = java.nio.file.Files.readAllBytes(p1);
-                } else if (java.nio.file.Files.exists(p2)) {
-                    bytes = java.nio.file.Files.readAllBytes(p2);
+            java.nio.file.Path[] candidates = {
+                    java.nio.file.Path.of("demo-launcher/dataset/timetable-sample.xls"),
+                    java.nio.file.Path.of("../demo-launcher/dataset/timetable-sample.xls"),
+                    java.nio.file.Path.of("data/计算机(中加)2501课表 - 修改.xls"),
+                    java.nio.file.Path.of("../data/计算机(中加)2501课表 - 修改.xls")
+            };
+            for (java.nio.file.Path p : candidates) {
+                if (java.nio.file.Files.exists(p)) {
+                    try {
+                        bytes = java.nio.file.Files.readAllBytes(p);
+                        break;
+                    } catch (Exception ignored) {
+                    }
                 }
-            } catch (Exception ignored) {
+            }
+            if (bytes == null || bytes.length == 0) {
+                try {
+                    ClassPathResource res = new ClassPathResource("samples/timetable-sample.xls");
+                    if (res.exists()) {
+                        bytes = res.getInputStream().readAllBytes();
+                    }
+                } catch (Exception ignored) {
+                }
             }
         }
         if (bytes == null || bytes.length == 0) {

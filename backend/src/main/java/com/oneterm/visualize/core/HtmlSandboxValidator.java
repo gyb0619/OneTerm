@@ -139,7 +139,7 @@ public final class HtmlSandboxValidator {
     );
 
     /**
-     * 第一版支持的「算法与数据结构（含操作系统经典算法）」关键词词表。
+     * 第一版支持的「算法与数据结构（含操作系统经典算法与系统机制）」关键词词表。
      */
     private static final List<String> ALGORITHM_KEYWORDS = List.of(
             "排序", "冒泡", "快速排序", "快排", "归并", "堆排序", "插入排序", "选择排序",
@@ -153,10 +153,13 @@ public final class HtmlSandboxValidator {
             "线段树", "树状数组", "并查集", "优先队列", "堆", "图", "状态机",
             "银行家", "死锁", "页面置换", "lru", "fifo", "opt", "clock",
             "调度", "时间片", "先来先服务", "fcfs", "短作业", "sjf", "高响应比",
-            "电梯算法", "scan", "内存分配", "首次适应", "最佳适应", "伙伴系统",
+            "电梯算法", "scan", "sstf", "内存分配", "首次适应", "最佳适应", "伙伴系统",
+            "进程", "线程", "pv", "信号量", "互斥", "同步", "生产者", "消费者", "上下文切换",
+            "pcb", "文件系统", "索引", "目录", "管道", "共享内存", "虚拟内存", "缺页", "磁盘",
+            "分页", "分段", "页表", "快表", "tlb", "中断", "系统调用", "管程", "资源分配",
             "算法", "数据结构", "复杂度", "遍历", "指针", "矩阵", "博弈",
             "sort", "bubble", "quick", "merge", "heap", "search", "binary",
-            "tree", "graph", "algorithm", "linked list", "stack", "queue"
+            "tree", "graph", "algorithm", "linked list", "stack", "queue", "process", "thread"
     );
 
     /**
