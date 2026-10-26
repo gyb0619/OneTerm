@@ -440,14 +440,14 @@ export const ExtractPage: React.FC = () => {
         </div>
 
         {/* 模式切换胶囊 */}
-        <div className="flex items-center gap-1.5 bg-slate-100/80 p-1.5 rounded-2xl self-start sm:self-auto">
+        <div className="flex items-center gap-1.5 bg-slate-100/80 p-1.5 rounded-2xl self-start sm:self-auto shadow-2xs">
           <button
             type="button"
             onClick={() => setMode('timetable')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ease-out active:scale-95 ${
               mode === 'timetable'
                 ? 'bg-white text-teal-700 shadow-xs font-semibold'
-                : 'text-slate-600 hover:text-slate-900'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
             <Calendar className="w-4 h-4 text-teal-600" />
@@ -456,10 +456,10 @@ export const ExtractPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setMode('ai')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ease-out active:scale-95 ${
               mode === 'ai'
                 ? 'bg-white text-teal-700 shadow-xs font-semibold'
-                : 'text-slate-600 hover:text-slate-900'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
             <Sparkles className="w-4 h-4 text-sky-600" />
@@ -470,7 +470,7 @@ export const ExtractPage: React.FC = () => {
 
       {/* 模式一：高校周次课表解析卡片 */}
       {mode === 'timetable' && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-4 animate-fade-slide-up">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
             {/* 学期基准参数 */}
             <div className="flex flex-wrap items-center gap-3.5 text-xs sm:text-sm">
@@ -617,7 +617,7 @@ export const ExtractPage: React.FC = () => {
 
       {/* 模式二：AI 文本/文件智能抽取卡片 */}
       {mode === 'ai' && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-3">
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-3 animate-fade-slide-up">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-slate-800">

@@ -490,9 +490,9 @@ export const VisualizePage: React.FC = () => {
                   return (
                     <div
                       key={`review-topic-${rt.id}`}
-                      className={`p-3 rounded-xl border transition-all flex flex-col justify-between gap-2 shadow-2xs ${
+                      className={`p-3 rounded-xl border transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-xs flex flex-col justify-between gap-2 shadow-2xs ${
                         isCurrentlyActive || isInputActive
-                          ? 'border-teal-400 bg-teal-50/50'
+                          ? 'border-teal-400 bg-teal-50/50 shadow-xs'
                           : 'border-slate-200/90 bg-slate-50/50 hover:bg-white hover:border-teal-300'
                       }`}
                     >
@@ -515,7 +515,7 @@ export const VisualizePage: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => handleSelectReviewTopic(rt)}
-                            className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold transition"
+                            className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold transition-all duration-150 active:scale-95"
                             title="该考点已有仿真动画，点击立即在右侧沙箱展示"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -526,7 +526,7 @@ export const VisualizePage: React.FC = () => {
                             type="button"
                             onClick={() => handleGenerateFromReviewTopic(rt)}
                             disabled={streaming}
-                            className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 text-xs font-semibold transition disabled:opacity-50"
+                            className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 text-xs font-semibold transition-all duration-150 active:scale-95 disabled:opacity-50"
                             title="点击一键生成该考点的动态交互仿真沙箱"
                           >
                             <Play className="w-3 h-3 text-teal-600" />
@@ -577,9 +577,9 @@ export const VisualizePage: React.FC = () => {
                       type="button"
                       disabled={streaming}
                       onClick={() => handleQuickPresetClick(p.topic)}
-                      className={`text-left p-2.5 rounded-xl border text-xs transition ${
+                      className={`text-left p-2.5 rounded-xl border text-xs transition-all duration-150 ease-out active:scale-95 hover:-translate-y-0.5 hover:shadow-2xs ${
                         isActive
-                          ? 'border-teal-500 bg-teal-50/70 text-teal-900 font-semibold'
+                          ? 'border-teal-500 bg-teal-50/70 text-teal-900 font-semibold shadow-xs'
                           : 'border-slate-200 bg-slate-50/60 hover:bg-slate-100 text-slate-700'
                       }`}
                     >
@@ -778,7 +778,7 @@ export const VisualizePage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setViewMode(viewMode === 'sandbox' ? 'source' : 'sandbox')}
-                    className="btn-secondary py-1.5 px-3 text-xs sm:text-sm flex items-center gap-1.5"
+                    className="btn-secondary py-1.5 px-3 text-xs sm:text-sm flex items-center gap-1.5 active:scale-95 transition-all duration-150"
                   >
                     {viewMode === 'sandbox' ? <Code2 className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     <span>{viewMode === 'sandbox' ? '源码' : '沙箱'}</span>
@@ -786,7 +786,7 @@ export const VisualizePage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIframeKey((k) => k + 1)}
-                    className="btn-secondary py-1.5 px-2.5 text-xs sm:text-sm"
+                    className="btn-secondary py-1.5 px-2.5 text-xs sm:text-sm active:scale-90 hover:rotate-180 transition-all duration-300"
                     title="重置刷新"
                   >
                     <RotateCcw className="w-4 h-4" />
@@ -800,10 +800,10 @@ export const VisualizePage: React.FC = () => {
                   title={`viz-${activeViz.id}`}
                   sandbox="allow-scripts"
                   srcDoc={activeViz.html}
-                  className="w-full h-[620px] border-0 bg-slate-50"
+                  className="w-full h-[620px] border-0 bg-slate-50 animate-fade-in"
                 />
               ) : (
-                <pre className="p-5 bg-slate-900 text-slate-100 text-xs sm:text-sm font-mono h-[620px] overflow-auto whitespace-pre-wrap leading-relaxed">
+                <pre className="p-5 bg-slate-900 text-slate-100 text-xs sm:text-sm font-mono h-[620px] overflow-auto whitespace-pre-wrap leading-relaxed animate-fade-in">
                   {activeViz.html}
                 </pre>
               )}

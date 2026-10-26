@@ -76,7 +76,7 @@ export const CitationCardList: React.FC<CitationCardListProps> = ({
                 key={`${citation.chunkId}-${idx}`}
                 type="button"
                 onClick={() => handleJumpToEvent(citation.eventId)}
-                className="group text-left rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-teal-50/50 hover:border-teal-300 p-3.5 transition-all duration-150 flex flex-col justify-between gap-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500/30 shadow-2xs"
+                className="group text-left rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-teal-50/50 hover:border-teal-300 p-3.5 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-xs active:scale-[0.99] flex flex-col justify-between gap-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500/30 shadow-2xs"
               >
                 <div className="space-y-2 w-full">
                   <div className="flex items-center justify-between gap-2">

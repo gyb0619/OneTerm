@@ -93,7 +93,7 @@ export const AppLayout: React.FC = () => {
           </div>
 
           {/* 顶栏主导航：胶囊分段风格 */}
-          <nav className="hidden md:flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/60">
+          <nav className="hidden md:flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/60 shadow-2xs">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -101,14 +101,14 @@ export const AppLayout: React.FC = () => {
                   key={item.to}
                   to={item.to}
                   className={({ isActive }) =>
-                    `flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-sm font-medium transition-all ${
+                    `flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-sm font-medium transition-all duration-200 ease-out active:scale-95 ${
                       isActive
                         ? 'bg-white text-teal-700 shadow-xs font-semibold'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                     }`
                   }
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
                   {item.label}
                 </NavLink>
               );
@@ -220,7 +220,9 @@ export const AppLayout: React.FC = () => {
 
       {/* 主工作区 */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-5">
-        <Outlet />
+        <div key={location.pathname} className="animate-fade-slide-up">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

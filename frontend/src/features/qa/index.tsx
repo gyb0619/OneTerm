@@ -600,7 +600,7 @@ export const QaPage: React.FC = () => {
           turns.map((turn) => {
             const isStreamingThis = turn.status === 'streaming';
             return (
-              <div key={turn.id} id={`turn-${turn.id}`} className="space-y-3.5 scroll-mt-20">
+              <div key={turn.id} id={`turn-${turn.id}`} className="space-y-3.5 scroll-mt-20 animate-fade-slide-up">
                 {/* 用户提问气泡 */}
                 <div className="flex justify-end items-start gap-2.5">
                   <div className="bg-teal-600 text-white rounded-2xl rounded-tr-xs px-4 sm:px-5 py-3 text-sm sm:text-base max-w-[85%] shadow-xs leading-relaxed">
@@ -613,7 +613,7 @@ export const QaPage: React.FC = () => {
 
                 {/* 助手回答卡片 */}
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 border border-teal-200/60 mt-0.5">
+                  <div className="w-8 h-8 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 border border-teal-200/60 mt-0.5 shadow-2xs">
                     <Bot className="w-4 h-4" />
                   </div>
 
@@ -701,7 +701,7 @@ export const QaPage: React.FC = () => {
               type="button"
               onClick={() => void askQuestion(item.text)}
               disabled={streaming}
-              className="shrink-0 px-3 py-1.5 rounded-full bg-white hover:bg-teal-50 border border-slate-200/80 hover:border-teal-300 text-slate-700 hover:text-teal-900 transition text-xs shadow-2xs flex items-center gap-1.5"
+              className="shrink-0 px-3 py-1.5 rounded-full bg-white hover:bg-teal-50 border border-slate-200/80 hover:border-teal-300 text-slate-700 hover:text-teal-900 transition-all duration-150 active:scale-95 hover:scale-[1.02] text-xs shadow-2xs flex items-center gap-1.5 disabled:opacity-50"
             >
               <span className="text-[10px] px-1.5 py-0.2 rounded bg-teal-50 text-teal-700 font-semibold">
                 {item.category}
@@ -712,7 +712,7 @@ export const QaPage: React.FC = () => {
           <button
             type="button"
             onClick={handleShufflePrompts}
-            className="shrink-0 p-1.5 rounded-full hover:bg-slate-200/60 text-slate-500 hover:text-teal-700 transition"
+            className="shrink-0 p-1.5 rounded-full hover:bg-slate-200/60 text-slate-500 hover:text-teal-700 transition-all duration-300 active:scale-90 hover:rotate-180"
             title="换一换提示词"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -723,7 +723,7 @@ export const QaPage: React.FC = () => {
       {/* 底部输入框 */}
       <form
         onSubmit={handleFormSubmit}
-        className="sticky bottom-4 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-md flex items-center gap-2"
+        className="sticky bottom-4 bg-white p-2.5 rounded-2xl border border-slate-200/90 shadow-md focus-within:ring-2 focus-within:ring-teal-500/30 focus-within:border-teal-500 transition-all duration-200 flex items-center gap-2"
       >
         <input
           type="text"
@@ -738,7 +738,7 @@ export const QaPage: React.FC = () => {
           <button
             type="button"
             onClick={abortStream}
-            className="p-2.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition"
+            className="p-2.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all duration-150 active:scale-95"
             title="停止生成"
           >
             <Square className="w-5 h-5" />
@@ -747,7 +747,7 @@ export const QaPage: React.FC = () => {
           <button
             type="submit"
             disabled={!questionInput.trim()}
-            className="p-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white transition disabled:opacity-40 disabled:hover:bg-teal-600"
+            className="p-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white transition-all duration-150 active:scale-95 hover:scale-105 disabled:opacity-40 disabled:hover:scale-100 shadow-xs"
             title="发送问题"
           >
             <Send className="w-5 h-5" />

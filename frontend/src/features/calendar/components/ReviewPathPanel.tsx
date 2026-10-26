@@ -342,7 +342,7 @@ export const ReviewPathPanel: React.FC<ReviewPathPanelProps> = ({
               key={sub.name}
               type="button"
               onClick={() => setSelectedSubjectName(sub.name)}
-              className={`shrink-0 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all ${
+              className={`shrink-0 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all duration-150 ease-out active:scale-95 ${
                 isActive
                   ? 'bg-teal-600 text-white shadow-xs'
                   : 'bg-slate-50 hover:bg-teal-50/70 text-slate-700 border border-slate-200/80 hover:border-teal-300'
@@ -544,7 +544,7 @@ export const ReviewPathPanel: React.FC<ReviewPathPanelProps> = ({
           {filteredTopics.map((item) => (
             <div
               key={item.id}
-              className={`rounded-2xl border p-4 flex flex-col justify-between gap-3 transition-all shadow-2xs ${
+              className={`rounded-2xl border p-4 flex flex-col justify-between gap-3 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-xs shadow-2xs ${
                 item.done
                   ? 'bg-slate-50/70 border-slate-200 text-slate-400'
                   : 'bg-white border-slate-200/90 hover:border-teal-300'
@@ -555,7 +555,7 @@ export const ReviewPathPanel: React.FC<ReviewPathPanelProps> = ({
                   <button
                     type="button"
                     onClick={() => onUpdateTopic(item.id, { done: !item.done })}
-                    className="mt-0.5 text-teal-600 hover:text-teal-700 shrink-0"
+                    className="mt-0.5 text-teal-600 hover:text-teal-700 shrink-0 transition-transform duration-150 active:scale-90 hover:scale-110"
                     title={item.done ? '标记为待复习' : '标记为已完成'}
                   >
                     {item.done ? (
@@ -568,7 +568,7 @@ export const ReviewPathPanel: React.FC<ReviewPathPanelProps> = ({
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <span
-                        className={`text-sm sm:text-base font-semibold leading-snug ${
+                        className={`text-sm sm:text-base font-semibold leading-snug transition-all duration-200 ${
                           item.done ? 'line-through text-slate-400' : 'text-slate-900'
                         }`}
                       >
@@ -598,7 +598,7 @@ export const ReviewPathPanel: React.FC<ReviewPathPanelProps> = ({
                 <button
                   type="button"
                   onClick={() => onDeleteTopic(item.id)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all duration-150 active:scale-90"
                   title="删除知识点"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -628,7 +628,7 @@ export const ReviewPathPanel: React.FC<ReviewPathPanelProps> = ({
                 <button
                   type="button"
                   onClick={() => onNavigateToVisualize(item)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-150 active:scale-95 hover:shadow-2xs ${
                     item.visualizationId
                       ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
                       : 'bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100'
@@ -646,8 +646,8 @@ export const ReviewPathPanel: React.FC<ReviewPathPanelProps> = ({
 
       {/* 智能提炼考点体系弹窗（经用户知情同意后生成与导入） */}
       {consentModalOpen && modalSubject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full border border-slate-200 overflow-hidden flex flex-col max-h-[88vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full border border-slate-200 overflow-hidden flex flex-col max-h-[88vh] animate-scale-in">
             {/* 弹窗头部 */}
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-teal-50/50">
               <div className="flex items-center gap-2">

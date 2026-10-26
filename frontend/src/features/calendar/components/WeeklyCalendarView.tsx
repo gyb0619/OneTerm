@@ -212,7 +212,7 @@ export const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') handleEventClick(ev);
                       }}
-                      className={`rounded-xl border p-3 text-left cursor-pointer transition-all ${
+                      className={`rounded-xl border p-3 text-left cursor-pointer transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98] ${
                         meta.cardClass
                       } ${
                         isHighlighted
