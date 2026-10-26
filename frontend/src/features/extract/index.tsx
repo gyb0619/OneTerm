@@ -261,6 +261,7 @@ export const ExtractPage: React.FC = () => {
           if (doneEvent.usage) {
             setLastTokenUsage(doneEvent.usage);
           }
+          void useAppStore.getState().refreshCurrentUser();
         },
       }
     );

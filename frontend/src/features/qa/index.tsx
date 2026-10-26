@@ -21,6 +21,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useSseStream } from '../../shared/hooks/useSseStream';
+import { useAppStore } from '../../shared/store/useAppStore';
 import type { ApiError, QaCitationDto } from '../../shared/types/api';
 import {
   getRandomPrompts,
@@ -287,8 +288,9 @@ export const QaPage: React.FC = () => {
                   : item
               )
             );
-            // 问答完成后刷新历史记录
+            // 问答完成后刷新历史记录与 Token 额度
             void loadHistory(false);
+            void useAppStore.getState().refreshCurrentUser();
           },
           onError: (apiErr: ApiError) => {
             setTurns((prev) =>

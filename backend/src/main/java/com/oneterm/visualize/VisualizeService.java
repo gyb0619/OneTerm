@@ -27,6 +27,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -93,7 +94,7 @@ public class VisualizeService {
                 emitter,
                 "preparing",
                 1,
-                4,
+                10,
                 "已加载提示词模板 " + PROMPT_VERSION + "，准备生成「" + normalizedTopic + "」交互式可视化"
         );
 
@@ -107,8 +108,8 @@ public class VisualizeService {
         sseEventPublisher.sendProgress(
                 emitter,
                 "validating",
-                3,
-                4,
+                9,
+                10,
                 "正在执行 HTML 安全沙箱校验（100KB 体积上限与零外部网络请求检测）"
         );
         ValidationResult firstValidation = validator.validateHtml(firstAttempt.content());
@@ -122,7 +123,7 @@ public class VisualizeService {
                     PROMPT_VERSION,
                     nowShanghaiIso()
             );
-            sseEventPublisher.sendProgress(emitter, "completed", 4, 4, "安全沙箱校验通过，可视化已入库");
+            sseEventPublisher.sendProgress(emitter, "completed", 10, 10, "安全沙箱校验通过，可视化已入库");
             sseEventPublisher.sendDone(
                     emitter,
                     saved,
@@ -137,7 +138,7 @@ public class VisualizeService {
                 emitter,
                 "retrying",
                 2,
-                4,
+                10,
                 "首次生成未通过安全沙箱校验（" + firstValidation.reason() + "），正在自动重试一次..."
         );
 
@@ -154,8 +155,8 @@ public class VisualizeService {
         sseEventPublisher.sendProgress(
                 emitter,
                 "validating",
-                3,
-                4,
+                9,
+                10,
                 "正在对重试生成的 HTML 执行安全沙箱校验"
         );
         ValidationResult secondValidation = validator.validateHtml(secondAttempt.content());
@@ -177,7 +178,7 @@ public class VisualizeService {
                 PROMPT_VERSION,
                 nowShanghaiIso()
         );
-        sseEventPublisher.sendProgress(emitter, "completed", 4, 4, "重试后安全沙箱校验通过，可视化已入库");
+        sseEventPublisher.sendProgress(emitter, "completed", 10, 10, "重试后安全沙箱校验通过，可视化已入库");
         sseEventPublisher.sendDone(emitter, saved, totalPromptTokens, totalCompletionTokens);
         return emitter;
     }
@@ -215,6 +216,7 @@ public class VisualizeService {
         AtomicReference<ChatResult> resultRef = new AtomicReference<>();
         AtomicReference<Throwable> errorRef = new AtomicReference<>();
         AtomicBoolean callbackInvoked = new AtomicBoolean(false);
+        AtomicInteger lastMilestone = new AtomicInteger(0);
 
         try {
             llmGateway.streamChat(userId, "visualize", messages, new LlmStreamListener() {
@@ -228,6 +230,19 @@ public class VisualizeService {
                     callbackInvoked.set(true);
                     if (deltaText != null && !deltaText.isEmpty()) {
                         deltaBuffer.append(deltaText);
+                        int currentBytes = deltaBuffer.length();
+                        int milestone = currentBytes / 2560;
+                        if (milestone > lastMilestone.get()) {
+                            lastMilestone.set(milestone);
+                            int stepNum = Math.min(2 + milestone, 8);
+                            sseEventPublisher.sendProgress(
+                                    emitter,
+                                    "generating",
+                                    stepNum,
+                                    10,
+                                    String.format("正在流式生成单文件交互仿真代码 (已生成 %.1f KB)...", currentBytes / 1024.0)
+                            );
+                        }
                         sseEventPublisher.sendDelta(emitter, deltaText);
                     }
                 }

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Calendar,
   FileUp,
@@ -8,24 +8,48 @@ import {
   ShieldCheck,
   GraduationCap,
   LogOut,
+  RefreshCw,
   Zap,
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { httpClient } from '../api/httpClient';
-import type { UserProfileResponse } from '../types/api';
 
 export const AppLayout: React.FC = () => {
-  const { currentUser, setCurrentUser } = useAppStore();
+  const { currentUser, setCurrentUser, isRefreshingQuota, refreshCurrentUser } = useAppStore();
   const navigate = useNavigate();
+  const location = useLocation();
 
+  // 1. 路由变化或初次挂载时，静默拉取并刷新当前用户及其最新 Token 额度
   useEffect(() => {
-    httpClient
-      .get<UserProfileResponse>('/api/auth/me')
-      .then((user) => setCurrentUser(user))
-      .catch(() => {
-        setCurrentUser(null);
-      });
-  }, [setCurrentUser]);
+    void refreshCurrentUser();
+  }, [location.pathname, refreshCurrentUser]);
+
+  // 2. 窗口重获焦点或页面切回前台时自动刷新额度，并设置 15 秒定时轮询保活
+  useEffect(() => {
+    const handleFocus = () => {
+      void refreshCurrentUser();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void refreshCurrentUser();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void refreshCurrentUser();
+      }
+    }, 15000);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.clearInterval(intervalId);
+    };
+  }, [refreshCurrentUser]);
 
   const handleLogout = async () => {
     try {
@@ -101,20 +125,59 @@ export const AppLayout: React.FC = () => {
             )}
             {currentUser ? (
               <div className="flex items-center gap-2">
-                <NavLink
-                  to="/login"
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/70 text-slate-700 transition-colors"
-                  title="点击切换偏好模型或查看详情"
+                <div
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100/90 border border-slate-200/80 transition-all text-xs"
+                  title={`当日已消耗 ${currentUser.todayTokensUsed.toLocaleString()} / 上限 ${currentUser.dailyTokenLimit.toLocaleString()} Tokens`}
                 >
-                  <span className="font-semibold text-slate-900">{currentUser.username}</span>
-                  <span className="text-xs text-slate-500 font-mono">
-                    {currentUser.todayTokensUsed} / {currentUser.dailyTokenLimit}
-                  </span>
-                </NavLink>
+                  <div className="flex flex-col text-right sm:text-left">
+                    <div className="flex items-center gap-1.5 font-medium text-slate-800">
+                      <NavLink
+                        to="/login"
+                        className="font-semibold text-slate-900 hover:text-teal-700 transition-colors"
+                        title="点击查看账号与模型偏好详情"
+                      >
+                        {currentUser.username}
+                      </NavLink>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-teal-100/80 text-teal-800 font-mono font-medium">
+                        {Math.min(
+                          100,
+                          Math.round(
+                            (currentUser.todayTokensUsed /
+                              Math.max(1, currentUser.dailyTokenLimit)) *
+                              100
+                          )
+                        )}
+                        %
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-500 font-mono">
+                      {currentUser.todayTokensUsed.toLocaleString()} / {currentUser.dailyTokenLimit.toLocaleString()}
+                    </span>
+                  </div>
+
+                  {/* 手动刷新额度按钮 */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      void refreshCurrentUser();
+                    }}
+                    disabled={isRefreshingQuota}
+                    className="p-1 rounded-lg text-slate-400 hover:text-teal-700 hover:bg-teal-50 transition-colors ml-0.5 disabled:opacity-50"
+                    title="点击立即刷新 Token 额度"
+                  >
+                    <RefreshCw
+                      className={`w-3.5 h-3.5 ${
+                        isRefreshingQuota ? 'animate-spin text-teal-600' : ''
+                      }`}
+                    />
+                  </button>
+                </div>
+
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                  className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                   title="退出登录"
                 >
                   <LogOut className="w-4 h-4" />

@@ -21,6 +21,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useSseStream } from '../../shared/hooks/useSseStream';
+import { useAppStore } from '../../shared/store/useAppStore';
 import { SkeletonCard } from '../../shared/components/SkeletonCard';
 import { EmptyState } from '../../shared/components/EmptyState';
 import type {
@@ -144,6 +145,41 @@ export const VisualizePage: React.FC = () => {
     () => calcUtf8Bytes(activeViz?.html || ''),
     [activeViz?.html]
   );
+
+  // 流式生成进度平滑递增与智能综合百分比计算，杜绝 0% 卡顿
+  const [smoothProgress, setSmoothProgress] = useState<number>(0);
+
+  useEffect(() => {
+    if (!streaming) {
+      setSmoothProgress(0);
+      return;
+    }
+    setSmoothProgress(14);
+    const interval = window.setInterval(() => {
+      setSmoothProgress((prev) => {
+        if (prev >= 94) return prev;
+        const increment = prev < 40 ? 2.5 : prev < 75 ? 1.2 : 0.4;
+        return Math.min(94, +(prev + increment).toFixed(1));
+      });
+    }, 200);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [streaming]);
+
+  const displayPercent = useMemo(() => {
+    if (!streaming) return 0;
+    const backendPercent =
+      progress && progress.total > 0
+        ? Math.round((progress.current / progress.total) * 100)
+        : 0;
+    const bytePercent = Math.min(
+      92,
+      Math.round(15 + (receivedStreamBytes / 16384) * 75)
+    );
+    return Math.min(98, Math.max(12, Math.round(smoothProgress), bytePercent, backendPercent));
+  }, [streaming, progress, receivedStreamBytes, smoothProgress]);
 
   const [selectedCourseFilter, setSelectedCourseFilter] = useState<string>('ALL');
 
@@ -282,6 +318,8 @@ export const VisualizePage: React.FC = () => {
             if (doneEvent.usage) {
               setLastUsage(doneEvent.usage);
             }
+            // 流式生成完成，立即拉取最新 Token 额度
+            void useAppStore.getState().refreshCurrentUser();
           },
         }
       );
@@ -365,10 +403,6 @@ export const VisualizePage: React.FC = () => {
   };
 
   const combinedError = streamError || actionError;
-  const progressPercent = useMemo(() => {
-    if (!progress || !progress.total || progress.total <= 0) return 35;
-    return Math.min(100, Math.max(10, Math.round((progress.current / progress.total) * 100)));
-  }, [progress]);
 
   return (
     <div className="space-y-5 max-w-7xl mx-auto pb-6">
@@ -635,23 +669,77 @@ export const VisualizePage: React.FC = () => {
 
         {/* 右侧：沙箱展示区 */}
         <div className="lg:col-span-7 space-y-4">
-          {/* 生成进度 */}
+          {/* 流式生成高质感进度面板 */}
           {streaming && (
-            <div className="bg-white rounded-2xl border border-teal-200 p-4 text-xs sm:text-sm space-y-2.5 shadow-xs">
+            <div className="bg-gradient-to-b from-teal-50/70 to-white rounded-2xl border border-teal-200/90 p-5 text-xs sm:text-sm space-y-4 shadow-sm animate-in fade-in duration-200">
+              {/* 头部：标题与百分比大字 */}
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <RefreshCw className="w-4 h-4 text-teal-600 animate-spin" />
-                  <span className="font-semibold text-slate-800">
-                    {progress?.message || '单文件代码流式生成中...'}
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-teal-100/80 text-teal-700 flex items-center justify-center shrink-0">
+                    <RefreshCw className="w-4 h-4 animate-spin text-teal-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">
+                      正在流式构建仿真沙箱
+                    </h3>
+                    <p className="text-xs text-slate-500 line-clamp-1">
+                      {progress?.message ||
+                        (displayPercent < 25
+                          ? '已加载提示词模板，正在初始化仿真画布...'
+                          : displayPercent < 85
+                          ? '流式接收仿真脚本与动画逻辑...'
+                          : '正在执行 HTML 安全沙箱隔离检测...')}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-end">
+                  <span className="text-xl sm:text-2xl font-black text-teal-700 font-mono tracking-tight">
+                    {displayPercent}%
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    已传输 {formatByteSize(receivedStreamBytes)}
                   </span>
                 </div>
-                <span className="font-mono text-teal-700">{formatByteSize(receivedStreamBytes)}</span>
               </div>
-              <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+
+              {/* 进度条轨道 */}
+              <div className="w-full bg-slate-200/80 h-3 rounded-full overflow-hidden p-0.5 shadow-inner">
                 <div
-                  className="h-full bg-teal-600 transition-all duration-300"
-                  style={{ width: `${progressPercent}%` }}
-                />
+                  className="h-full rounded-full bg-gradient-to-r from-teal-500 via-emerald-400 to-teal-600 transition-all duration-300 ease-out shadow-xs relative"
+                  style={{ width: `${displayPercent}%` }}
+                >
+                  <div className="absolute inset-0 bg-white/20 animate-pulse rounded-full" />
+                </div>
+              </div>
+
+              {/* 四阶段指示器 */}
+              <div className="grid grid-cols-4 gap-2 pt-1 border-t border-slate-100">
+                {[
+                  { label: '提示词装载', active: displayPercent >= 10, done: displayPercent >= 25 },
+                  { label: '代码流式产出', active: displayPercent >= 25, done: displayPercent >= 85 },
+                  { label: '沙箱安全检测', active: displayPercent >= 85, done: displayPercent >= 96 },
+                  { label: '渲染沙箱就绪', active: displayPercent >= 96, done: false },
+                ].map((st) => (
+                  <div key={st.label} className="flex flex-col items-center text-center gap-1">
+                    <div
+                      className={`w-2 h-2 rounded-full transition-colors ${
+                        st.done
+                          ? 'bg-emerald-500 ring-2 ring-emerald-200'
+                          : st.active
+                          ? 'bg-teal-600 ring-2 ring-teal-200 animate-pulse'
+                          : 'bg-slate-300'
+                      }`}
+                    />
+                    <span
+                      className={`text-[11px] truncate ${
+                        st.active ? 'text-teal-900 font-semibold' : 'text-slate-400'
+                      }`}
+                    >
+                      {st.label}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
