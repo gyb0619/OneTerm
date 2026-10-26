@@ -6,47 +6,66 @@
 
 ---
 
-## 一、10 分钟快速复现指南
+## 一、快速运行与评测指南
 
-### 0. Windows 示例环境独立启动器（BAT + JSON 一键直达）
-在 Windows 环境下直接双击根目录的 **`start-demo.bat`** 即可打开交互式控制台，支持自动启动服务、一键装载全套预置示例数据（9 项经典日程事件、真实周次课表、全科复习考点与交互仿真）并自动唤起浏览器。详细配置与数据集说明请参阅 [demo-launcher/README.md](demo-launcher/README.md)。
+### 1. 【极速推荐】独立可执行 Jar 发行包（零配置，仅需 Java）
+项目已将全量 Spring Boot 后端、React 前端单页应用（SPA）与预置示例数据库打包完毕，存放在 **`./OneTerm/`** 目录下：
 
-### 1. 环境要求
-- **Docker 方式（推荐）**：Docker 24+ 与 Docker Compose v2+
-- **本地源码方式**：
-  - **JDK**：Java 21（OpenJDK 21 LTS）
-  - **Maven**：Apache Maven 3.9+
-  - **Node.js**：Node.js 20+ / 22+（含 npm 10+）
+- **一键启动（BAT 脚本）**：
+  在 Windows 环境下直接双击进入 **`OneTerm/start.bat`**。
+  - 自动校验 Java 环境（需 Java 17 或 Java 21 LTS）。
+  - 后台静默启动 `oneterm.jar`（端口 8789），服务就绪后**自动唤起默认浏览器**打开 `http://localhost:8789/`。
+  - 停止服务：直接双击运行 `OneTerm/stop.bat` 即可一键安全停止。
+- **交互式启动器**：
+  双击运行 **`OneTerm/launch.bat`**，支持直接修改/重置 SQLite 示例数据、查看账号大纲、服务自检与状态监听。
+- **命令行直接启动**：
+  ```bash
+  cd OneTerm
+  java -jar oneterm.jar
+  ```
+  启动后访问：`http://localhost:8789/`
 
-### 2. 克隆仓库与配置环境变量
+> **预置管理员体验账号**：
+> - 用户名：`示例信息`
+> - 密码：`Demo@123456`
+> - 角色：`ADMIN`（系统最高管理权限，已预置 9 项全真日程事件、2 处预置时间冲突、10 项考前复习知识点体系与交互式算法/协议仿真沙箱）。
 
+---
+
+### 2. 【源码与全量依赖交付包】`项目源代码/` 目录说明
+为满足离线审查与评审需求，项目根目录下额外归档了 **`项目源代码/`** 文件夹：
+- **`项目源代码/backend/`**：包含 Java 21 完整工程源码（`src/`）、构建定义（`pom.xml`）以及 **`lib/` 目录下全部 115 个已解析并下载完成的 Maven 依赖 Jar 包**。
+- **`项目源代码/frontend/`**：包含 React 18 + Vite 前端完整源码（`src/`）、配置文件（`package.json`、`package-lock.json`、`tailwind.config.js` 等）以及 **完整的 `node_modules/` 依赖库**，彻底杜绝脱机环境下的网络依赖拉取问题。
+- **`项目源代码/data/`、`docs/`、`docker/`**：包含数据库迁移脚本、全量 API 契约、文档与容器编排文件。
+
+---
+
+### 3. 本地源码常规编译与运行
+
+#### 环境要求
+- **JDK**：Java 21（OpenJDK 21 LTS）
+- **Maven**：Apache Maven 3.9+
+- **Node.js**：Node.js 20+ / 22+（含 npm 10+）
+
+#### 一键命令启动
 ```bash
-git clone https://github.com/gyb0619/OneTerm.git
-cd OneTerm
-cp .env.example .env
+# 1. 编译前端静态产物
+cd frontend && npm install && npm run build && cd ..
+
+# 2. 拷贝前端静态产物到后端资源目录并启动后端
+mvn -f backend/pom.xml spring-boot:run
 ```
+访问应用入口：`http://localhost:8789/`
 
-### 3. 一条命令启动（Docker Compose）
+---
 
+### 4. 容器化一键部署（Docker Compose）
 ```bash
 docker compose up --build -d
 ```
-
-启动完成后直接访问：
+启动完成后访问：
 - **Web 应用入口**：`http://localhost:8789`（HTTPS：`https://localhost:8443`）
 - **Swagger UI / OpenAPI 调试台**：`http://localhost:8789/swagger-ui/index.html`
-
-### 4. 本地源码一键构建与启动（无需 Docker）
-
-```bash
-# 1. 构建前端静态产物
-cd frontend && npm ci && npm run build && cd ..
-
-# 2. 启动后端服务（内置静态托管前端与 API，监听 8789 端口）
-mvn -f backend/pom.xml spring-boot:run
-```
-
-启动后在浏览器访问 `http://localhost:8789` 即可使用全部功能。
 
 ---
 
@@ -76,70 +95,80 @@ OneTerm 支持 **「系统环境变量直接调用」** 与 **「管理后台数
 
 1. **自动触发条件**：
    - 当环境变量 `ONETERM_MOCK=true`，或数据库中尚未配置任何启用的大模型 API Key 时，系统自动进入 **Mock 演示模式**。
-2. **一键载入示例数据**：
-   - 打开登录页 `http://localhost:8789/login`，无需输入账号密码，直接点击 **「一键载入示例数据（免配置直接体验）」**。
-   - 系统将自动创建并登录演示账号，载入 `docs/samples/` 下的 9 条真实感教务事件（含 3 门课程、3 场考试、2 项作业截止、1 项社团活动及 **2 处预置时间冲突**）、构建 `float32` 向量切片，并预置「冒泡排序」与「TCP 三次握手」交互式可视化动画及考前复习计划。
+2. **拟造示例数据库直通**：
+   - 系统数据库默认已写入全套高质量拟造教务数据，涵盖 3 门必修课程、3 场期末统考、2 项大作业截止、1 项社团活动，并**包含 2 处真实时间冲突**。
+   - 登录页面默认填入账号 `示例信息` 与密码 `Demo@123456`，点击登录即可直接进入全景工作台。
 3. **管理员后台体验**：
-   - 首次启动时，系统根据环境变量 `ONETERM_ADMIN_USERNAME` 与 `ONETERM_ADMIN_PASSWORD` 自动初始化首个 `ADMIN` 账号。
-   - 管理员登录后可进入「管理后台」配置真实的对话（默认推荐 DeepSeek）、识图与向量模型（API Key 经 AES-256-GCM 加密入库，前端仅显示脱敏尾号），或创建评委账号、调整每日 Token 额度上限（默认 `100,000` tokens/天）。
+   - 首次启动时，系统根据环境变量 `ONETERM_ADMIN_USERNAME` 与 `ONETERM_ADMIN_PASSWORD`（默认 `示例信息` / `Demo@123456`）初始化首个 `ADMIN` 账号。
+   - 管理员登录后可进入「管理后台」配置真实的大模型网关密钥，或创建新账号、重置密码、调整每日 Token 额度上限（默认 `100,000` tokens/天）。
 
 ---
 
-## 三、核心功能链路
+## 四、自动化测试套件说明
+
+系统后端配备了完整的自动化测试体系，共包含 **66 项 JUnit 5 单元测试与集成测试**：
+- **测试执行命令**：
+  ```bash
+  mvn -f backend/pom.xml test
+  ```
+- **测试文件安全隔离**：
+  - 测试期间产生的临时数据库均命名为 `test-*.db` 并严格隔离在 `backend/target/` 目录下，在工程打包前已全部自动清理。
+- **课表展开测试防脆设计（`TimetableWeekParserTest`）**：
+  - `TimetableWeekParserTest` 采用 **JUnit 5 的 `assumeTrue` 条件假设断言**。当在未包含本地私有课表 `.xls` 模板的环境下运行时，测试框架将自动跳过真实文件解析环节，标记为已跳过（Skipped），确保任何机器在拉取源码构建时均能稳定输出 `BUILD SUCCESS`。
+
+---
+
+## 五、核心功能链路
 
 1. **教务信息导入与流式抽取 (`/extract`)**：
    - 支持粘贴文本、上传 `.txt`、`.xlsx` 表格及图片（识图模型转文字）。
-   - 系统提示词内置防 Prompt 注入声明，通过 SSE 实时推送抽取进度（「正在识别第 N 条事件」），JSON 解析失败自动重试一次，前端支持人工核对、编辑、增删后批量入库。
+   - 系统提示词内置防 Prompt 注入隔离，通过 SSE 实时推送抽取进度，JSON 解析失败自动重试一次，前端支持人工核对、编辑、增删后批量入库。
 2. **周视图日历、冲突检测与负载热力图 (`/calendar`)**：
    - 周视图按事件类型语义着色；纯函数检测完全重叠与部分重叠冲突（首尾相接不计冲突），以醒目卡片展示并支持点击定位。
    - 按权重（考试 5 > 作业截止 3 > 课程 2 > 活动/通知 1）生成单色渐变学期热力图，标出 **「最空的一天」「最忙的一天」「最忙的一周」**。
 3. **RAG 自然语言问答 (`/qa`)**：
    - 原文按段切片，以 `float32` BLOB 存入 SQLite 并通过余弦相似度检索 Top-4 片段（未配置向量模型时自动降级为 BM25 关键词检索）。
-   - SSE 流式输出回答，底部列出引用的原文片段，点击即可跳转到日历对应事件。
+   - SSE 流式输出回答，具备打字呼吸微光标与动态提示词「换一换」，底部列出引用的原文片段，点击即可跳转到日历对应事件。
 4. **知识点可视化工坊 (`/visualize`)**：
    - 输入「冒泡排序」「TCP 三次握手」等算法或网络协议知识点，流式生成含滑块与控制按钮的单文件交互式 HTML。
    - 后端执行严格安全校验（体积 ≤ 100KB、禁止任何外部网络请求与外链），前端置于 `sandbox="allow-scripts"`（无 `allow-same-origin`）的隔离 `iframe` 中渲染。
 5. **考前复习路径与 `.ics` 导出 (`/calendar`)**：
+   - 单科分离多科聚合，智能检测学期课表并经用户知情同意后一键提炼全科知识点考查细点体系；
    - 按考试日期倒排知识点，自动避开冲突日并均衡每日负载写回日历；支持一键导出标准 `.ics` 文件导入手机日历。
 
 ---
 
-## 四、仓库目录结构
+## 六、仓库目录结构
 
 ```text
 OneTerm/
-├── .env.example                 # 环境变量模板
-├── docker-compose.yml           # Docker Compose 一键编排配置（暴露 8789 端口）
-├── docker/
-│   ├── Dockerfile.backend       # 后端 Java 21 镜像构建文件
-│   ├── Dockerfile.frontend      # 前端构建与 Nginx HTTPS/SSE 镜像文件
-│   └── nginx.conf               # Nginx 反向代理配置（SSE 路径 proxy_buffering off）
-├── docs/
-│   ├── PRD.md                   # 产品需求文档
-│   ├── CONVENTIONS.md           # 全局错误码、SSE 事件、时区与安全约定
-│   ├── ACCEPTANCE_REPORT.md     # PRD 第 13 节逐项验收核对报告
-│   ├── api/openapi.yaml         # OpenAPI 3.0 完整接口契约
-│   ├── prompts/                 # 各阶段及子代理提示词与完整工程迭代记录
-│   └── samples/                 # 标准示例数据集（含 2 处预置冲突与期望抽取 JSON）
-├── backend/                     # Spring Boot 4.1.1 + Java 21 + SQLite + Flyway 后端
-│   ├── pom.xml
-│   └── src/
-│       ├── main/java/com/oneterm/
-│       │   ├── common/          # 统一异常、SSE 发布器、向量工具、Swagger 与静态路由
-│       │   ├── llm/             # 统一大模型网关、AES-256-GCM 加密、额度控制与 Mock 实现
-│       │   ├── auth/            # 登录、BCrypt、5次失败锁10分钟、CSRF 与一键示例载入
-│       │   ├── admin/           # 模型配置管理、用户启停、密码重置与额度统计
-│       │   ├── extract/         # 文本/txt/xlsx/图片导入、流式抽取与事件管理
-│       │   ├── calendar/        # 冲突检测、负载密度热力图、复习排期纯算法与 .ics 导出
-│       │   ├── qa/              # 原文切片、余弦相似度/BM25 检索与流式问答
-│       │   └── visualize/       # 知识点可视化生成與 HTML 安全沙箱校验器
-│       ├── main/resources/
-│       │   ├── db/migration/    # Flyway V1__init.sql 数据库迁移脚本
-│       │   └── prompts/         # 版本化系统提示词模板 (extract-v1, qa-v1, visualize-v1)
-│       └── test/java/           # 59 项 JUnit 5 单元与集成测试
-└── frontend/                    # React 18 + Vite + TypeScript + Tailwind + Zustand + ECharts
-    ├── package.json
-    └── src/
-        ├── shared/              # 统一 HTTP/CSRF 客户端、useSseStream Hook、全局状态与布局
-        └── features/            # auth, admin, extract, calendar, qa, visualize 六大业务模块
+├── OneTerm/                     # 【独立 Jar 发行包】零环境配置一键运行目录
+│   ├── oneterm.jar              # 全量可执行 Jar 包（后端服务 + 嵌入式前端 SPA）
+│   ├── start.bat                # Windows 一键启动脚本（直接唤起浏览器）
+│   ├── stop.bat                 # Windows 一键停止脚本
+│   ├── launch.bat               # 交互式管理启动器
+│   ├── README.md                # Jar 版独立说明
+│   ├── data/oneterm.db          # 预置全量示例 SQLite 数据库
+│   └── demo-launcher/           # 示例环境配置与数据集
+├── 项目源代码/                  # 【源码与依赖交付包】完整代码与离线依赖库
+│   ├── backend/                 # Spring Boot 4.1.1 + Java 21 后端源码
+│   │   ├── pom.xml
+│   │   ├── src/                 # 后端 Java 源码与资源
+│   │   └── lib/                 # 全部 115 个 Maven 依赖 Jar 包（支持离线）
+│   ├── frontend/                # React 18 + Vite 前端源码
+│   │   ├── package.json
+│   │   ├── src/                 # 前端 TypeScript 源码
+│   │   └── node_modules/        # 全部前端 npm 依赖包
+│   ├── data/                    # 示例数据与数据库
+│   ├── demo-launcher/           # 启动器控制台
+│   ├── docker/                  # 容器镜像构建文件
+│   └── docs/                    # PRD、接口契约与开发文档
+├── backend/                     # 后端工程主目录
+├── frontend/                    # 前端工程主目录
+├── data/                        # 运行数据库与课表模板
+├── demo-launcher/               # 原生启动器模块
+├── docs/                        # PRD、架构图与开发文档
+├── docker-compose.yml           # Docker Compose 一键编排配置
+├── start-demo.bat               # 根目录示例启动入口
+└── README.md                    # 本文档
 ```
