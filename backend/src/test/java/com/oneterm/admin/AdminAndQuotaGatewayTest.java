@@ -54,13 +54,13 @@ class AdminAndQuotaGatewayTest {
     @BeforeEach
     void setUp() throws Exception {
         adminInitializer.ensureAdminExists();
-        jdbcTemplate.update("UPDATE users SET failed_count = 0, locked_until = NULL, enabled = 1 WHERE username = 'admin'");
+        jdbcTemplate.update("UPDATE users SET failed_count = 0, locked_until = NULL, enabled = 1 WHERE username = '示例信息'");
 
         MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
-                                "username", "admin",
-                                "password", "AdminTest@123"
+                                "username", "示例信息",
+                                "password", "Demo@123456"
                         ))))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -257,7 +257,7 @@ class AdminAndQuotaGatewayTest {
         mockMvc.perform(get("/api/admin/users").session(adminSession))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].username").value("admin"))
+                .andExpect(jsonPath("$[?(@.username == '示例信息')].role").value("ADMIN"))
                 .andExpect(jsonPath("$[0].todayTokensUsed").isNumber());
 
         // 2. 管理员查询用量明细

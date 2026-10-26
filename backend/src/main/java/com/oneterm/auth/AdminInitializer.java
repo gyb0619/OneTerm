@@ -24,8 +24,8 @@ public class AdminInitializer implements ApplicationRunner {
     public AdminInitializer(
             JdbcTemplate jdbcTemplate,
             PasswordEncoder passwordEncoder,
-            @Value("${oneterm.admin.username:admin}") String adminUsername,
-            @Value("${oneterm.admin.password:Admin@123456}") String adminPassword
+            @Value("${oneterm.admin.username:示例信息}") String adminUsername,
+            @Value("${oneterm.admin.password:Demo@123456}") String adminPassword
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.passwordEncoder = passwordEncoder;
@@ -39,6 +39,9 @@ public class AdminInitializer implements ApplicationRunner {
     }
 
     public void ensureAdminExists() {
+        // 彻底清理旧的 admin 账户，保持系统中仅保留「示例信息」作为主管理员账号
+        jdbcTemplate.update("DELETE FROM users WHERE username = 'admin'");
+
         Integer adminCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM users WHERE role = 'ADMIN'",
                 Integer.class
@@ -46,8 +49,8 @@ public class AdminInitializer implements ApplicationRunner {
         if (adminCount != null && adminCount > 0) {
             return;
         }
-        String username = (adminUsername == null || adminUsername.isBlank()) ? "admin" : adminUsername.trim();
-        String rawPassword = (adminPassword == null || adminPassword.isBlank()) ? "Admin@123456" : adminPassword;
+        String username = (adminUsername == null || adminUsername.isBlank()) ? "示例信息" : adminUsername.trim();
+        String rawPassword = (adminPassword == null || adminPassword.isBlank()) ? "Demo@123456" : adminPassword;
         String passwordHash = passwordEncoder.encode(rawPassword);
 
         Integer existingSameUsername = jdbcTemplate.queryForObject(

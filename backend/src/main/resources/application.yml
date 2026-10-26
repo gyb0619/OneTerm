@@ -31,5 +31,5 @@ oneterm:
   mock: ${ONETERM_MOCK:false}
   secret-key: ${ONETERM_SECRET_KEY:dev-only-oneterm-aes256-secret-key-32b}
   admin:
-    username: ${ONETERM_ADMIN_USERNAME:admin}
-    password: ${ONETERM_ADMIN_PASSWORD:Admin@123456}
+    username: ${ONETERM_ADMIN_USERNAME:示例信息}
+    password: ${ONETERM_ADMIN_PASSWORD:Demo@123456}

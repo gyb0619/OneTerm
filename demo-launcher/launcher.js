@@ -245,29 +245,22 @@ function seedDatabaseDirectly() {
       );
     `);
 
-    // 2. 插入/更新 admin 管理员与默认演示用户「示例信息」
-    const adminPassHash = '$2a$10$xZWxwlrXkn8eJzfMr4aTy.Sf8SkSRGcuJqB8e.b8JxhRotEruqUqu'; // Admin@123456
-    const demoPassHash = '$2a$10$OqiKjvbe2JaQw73i6VwV.uVj3rzs3szRqqlJnqWh36/vKIa7IIIgG';  // Demo@123456
+    // 2. 彻底删除旧 admin 账户，并将「示例信息」直接设置为唯一的超级管理员 (ADMIN)
+    db.prepare("DELETE FROM users WHERE username = 'admin'").run();
 
-    const checkAdmin = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
-    if (!checkAdmin) {
-      db.prepare(`
-        INSERT INTO users (username, password_hash, role, enabled, daily_token_limit, failed_count)
-        VALUES ('admin', ?, 'ADMIN', 1, 100000, 0)
-      `).run(adminPassHash);
-    }
+    const demoPassHash = '$2a$10$OqiKjvbe2JaQw73i6VwV.uVj3rzs3szRqqlJnqWh36/vKIa7IIIgG';  // Demo@123456
 
     const checkDemo = db.prepare('SELECT id FROM users WHERE username = ?').get('示例信息');
     let userId;
     if (checkDemo) {
       userId = checkDemo.id;
       db.prepare(`
-        UPDATE users SET password_hash = ?, enabled = 1, failed_count = 0, locked_until = NULL WHERE id = ?
+        UPDATE users SET password_hash = ?, role = 'ADMIN', enabled = 1, failed_count = 0, locked_until = NULL WHERE id = ?
       `).run(demoPassHash, userId);
     } else {
       const insRes = db.prepare(`
         INSERT INTO users (username, password_hash, role, enabled, daily_token_limit, failed_count)
-        VALUES ('示例信息', ?, 'USER', 1, 100000, 0)
+        VALUES ('示例信息', ?, 'ADMIN', 1, 100000, 0)
       `).run(demoPassHash);
       userId = insRes.lastInsertRowid;
     }
@@ -486,8 +479,7 @@ async function startServices() {
   log(`  前端调试服务 (Vite):     ${config.frontend.devUrl}`, 'white');
   log(`  Swagger 离线接口文档:   ${config.server.swaggerUrl}`, 'white');
   log('');
-  log(`  默认用户账号:  ${config.demo.accounts.demoStudent.username} / ${config.demo.accounts.demoStudent.password}`, 'yellow');
-  log(`  系统管理账号:  ${config.demo.accounts.admin.username} / ${config.demo.accounts.admin.password}`, 'yellow');
+  log(`  主管理员账号:  ${config.demo.accounts.demoStudent.username} / ${config.demo.accounts.demoStudent.password} (角色: ADMIN)`, 'yellow');
   log('=======================================================================\n', 'green');
 }
 
@@ -526,8 +518,7 @@ function showSampleInfo() {
   log('             OneTerm 全套拟造示例数据集信息汇总', 'cyan');
   log('=======================================================================', 'cyan');
   log('【1. 账户信息】', 'yellow');
-  log(`  演示账号: ${summary.profiles.student.username} / ${summary.profiles.student.password}`);
-  log(`  管理员号: ${summary.profiles.admin.username} / ${summary.profiles.admin.password}`);
+  log(`  主管理员账号: ${summary.profiles.student.username} / ${summary.profiles.student.password} (权限: ADMIN)`);
   log('');
   log('【2. 预置骨干课程与考试】', 'yellow');
   for (const c of summary.courses) {

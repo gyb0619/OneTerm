@@ -43,7 +43,7 @@ class AuthAndSecurityTest {
     @BeforeEach
     void setUp() {
         adminInitializer.ensureAdminExists();
-        jdbcTemplate.update("UPDATE users SET failed_count = 0, locked_until = NULL, enabled = 1 WHERE username = 'admin'");
+        jdbcTemplate.update("UPDATE users SET failed_count = 0, locked_until = NULL, enabled = 1 WHERE username = '示例信息'");
     }
 
     @Test
@@ -60,15 +60,15 @@ class AuthAndSecurityTest {
     @Test
     void adminAutoInitializedAndLoginSetsSessionAndCsrfCookie() throws Exception {
         String loginJson = objectMapper.writeValueAsString(Map.of(
-                "username", "admin",
-                "password", "AdminTest@123"
+                "username", "示例信息",
+                "password", "Demo@123456"
         ));
 
         MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginJson))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("admin"))
+                .andExpect(jsonPath("$.username").value("示例信息"))
                 .andExpect(jsonPath("$.role").value("ADMIN"))
                 .andReturn();
 
@@ -81,7 +81,7 @@ class AuthAndSecurityTest {
 
         mockMvc.perform(get("/api/auth/me").session(session))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("admin"))
+                .andExpect(jsonPath("$.username").value("示例信息"))
                 .andExpect(jsonPath("$.role").value("ADMIN"));
     }
 
@@ -187,7 +187,7 @@ class AuthAndSecurityTest {
         MvcResult firstRes = mockMvc.perform(post("/api/auth/demo-load"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("示例信息"))
-                .andExpect(jsonPath("$.role").value("USER"))
+                .andExpect(jsonPath("$.role").value("ADMIN"))
                 .andReturn();
 
         JsonNode profile = objectMapper.readTree(firstRes.getResponse().getContentAsString());

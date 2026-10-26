@@ -9,6 +9,7 @@ import {
   Loader2,
   MessageSquareText,
   Plus,
+  RefreshCw,
   RotateCcw,
   Send,
   Sparkles,
@@ -22,8 +23,7 @@ import {
 import { useSseStream } from '../../shared/hooks/useSseStream';
 import type { ApiError, QaCitationDto } from '../../shared/types/api';
 import {
-  QUICK_QUESTIONS,
-  QUICK_QUESTION_GROUPS,
+  getRandomPrompts,
   rebuildQaIndex,
   fetchQaHistory,
   deleteQaHistoryItem,
@@ -71,36 +71,36 @@ const MarkdownAnswer: React.FC<{ content: string }> = ({ content }) => {
   if (!content) return null;
 
   return (
-    <div className="qa-markdown-root text-xs sm:text-sm text-slate-700 leading-relaxed break-words space-y-2">
+    <div className="qa-markdown-root text-sm sm:text-base text-slate-700 leading-relaxed break-words space-y-2.5">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
           h1: ({ ...props }) => (
-            <h1 className="text-base font-bold text-slate-900 mt-4 mb-2 pb-1 border-b border-slate-100" {...props} />
+            <h1 className="text-lg font-bold text-slate-900 mt-4 mb-2 pb-1 border-b border-slate-100" {...props} />
           ),
           h2: ({ ...props }) => (
-            <h2 className="text-sm font-bold text-slate-900 mt-3 mb-1.5" {...props} />
+            <h2 className="text-base font-bold text-slate-900 mt-3.5 mb-1.5" {...props} />
           ),
           h3: ({ ...props }) => (
-            <h3 className="text-xs sm:text-sm font-semibold text-slate-800 mt-2.5 mb-1" {...props} />
+            <h3 className="text-sm sm:text-base font-semibold text-slate-800 mt-3 mb-1" {...props} />
           ),
           p: ({ ...props }) => (
-            <p className="my-1.5 leading-relaxed text-slate-700 whitespace-pre-wrap" {...props} />
+            <p className="my-2 leading-relaxed text-slate-700 whitespace-pre-wrap" {...props} />
           ),
           ul: ({ ...props }) => (
-            <ul className="list-disc pl-5 my-2 space-y-1 text-slate-700" {...props} />
+            <ul className="list-disc pl-5 my-2 space-y-1 text-slate-700 text-sm sm:text-base" {...props} />
           ),
           ol: ({ ...props }) => (
-            <ol className="list-decimal pl-5 my-2 space-y-1 text-slate-700" {...props} />
+            <ol className="list-decimal pl-5 my-2 space-y-1 text-slate-700 text-sm sm:text-base" {...props} />
           ),
           li: ({ ...props }) => (
             <li className="leading-relaxed" {...props} />
           ),
           blockquote: ({ ...props }) => (
-            <blockquote className="border-l-3 border-teal-500 bg-teal-50/50 pl-3.5 py-1.5 my-2 text-slate-700 italic rounded-r text-xs sm:text-sm" {...props} />
+            <blockquote className="border-l-4 border-teal-500 bg-teal-50/60 pl-3.5 py-2 my-2.5 text-slate-700 italic rounded-r text-sm" {...props} />
           ),
           pre: ({ ...props }) => (
-            <pre className="bg-slate-900 text-slate-100 p-3.5 rounded-xl overflow-x-auto text-xs font-mono my-2.5 border border-slate-800 shadow-inner" {...props} />
+            <pre className="bg-slate-900 text-slate-100 p-4 rounded-xl overflow-x-auto text-xs sm:text-sm font-mono my-3 border border-slate-800 shadow-inner" {...props} />
           ),
           code: ({ className, children, ...props }: any) => {
             const isCodeBlock = className?.includes('language-') || String(children).includes('\n');
@@ -112,14 +112,14 @@ const MarkdownAnswer: React.FC<{ content: string }> = ({ content }) => {
               );
             }
             return (
-              <code className="px-1.5 py-0.5 mx-0.5 rounded bg-slate-100 text-teal-800 font-mono text-xs border border-slate-200" {...props}>
+              <code className="px-1.5 py-0.5 mx-0.5 rounded bg-slate-100 text-teal-800 font-mono text-xs sm:text-sm border border-slate-200" {...props}>
                 {children}
               </code>
             );
           },
           table: ({ ...props }) => (
             <div className="overflow-x-auto my-3 border border-slate-200/90 rounded-xl shadow-xs">
-              <table className="min-w-full divide-y divide-slate-200 text-xs text-left" {...props} />
+              <table className="min-w-full divide-y divide-slate-200 text-xs sm:text-sm text-left" {...props} />
             </div>
           ),
           thead: ({ ...props }) => (
@@ -132,10 +132,10 @@ const MarkdownAnswer: React.FC<{ content: string }> = ({ content }) => {
             <tr className="hover:bg-slate-50/70 transition-colors" {...props} />
           ),
           th: ({ ...props }) => (
-            <th className="px-3 py-2 text-slate-800 font-semibold" {...props} />
+            <th className="px-3.5 py-2.5 text-slate-800 font-semibold" {...props} />
           ),
           td: ({ ...props }) => (
-            <td className="px-3 py-2 text-slate-700 whitespace-pre-wrap" {...props} />
+            <td className="px-3.5 py-2.5 text-slate-700 whitespace-pre-wrap" {...props} />
           ),
           a: ({ ...props }) => (
             <a className="text-teal-600 hover:text-teal-700 underline font-medium" target="_blank" rel="noopener noreferrer" {...props} />
@@ -144,7 +144,7 @@ const MarkdownAnswer: React.FC<{ content: string }> = ({ content }) => {
             <strong className="font-semibold text-slate-900" {...props} />
           ),
           hr: ({ ...props }) => (
-            <hr className="my-3 border-slate-200" {...props} />
+            <hr className="my-3.5 border-slate-200" {...props} />
           ),
         }}
       >
@@ -157,12 +157,17 @@ const MarkdownAnswer: React.FC<{ content: string }> = ({ content }) => {
 export const QaPage: React.FC = () => {
   const [questionInput, setQuestionInput] = useState('');
   const [turns, setTurns] = useState<QaConversationTurn[]>([]);
+  const [suggestedPrompts, setSuggestedPrompts] = useState(() => getRandomPrompts(3));
   const [historyList, setHistoryList] = useState<QaHistoryItem[]>([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [indexing, setIndexing] = useState(false);
   const [indexStatus, setIndexStatus] = useState<QaIndexResponse | null>(null);
   const [indexError, setIndexError] = useState<string | null>(null);
+
+  const handleShufflePrompts = useCallback(() => {
+    setSuggestedPrompts(getRandomPrompts(3));
+  }, []);
 
   const turnsEndRef = useRef<HTMLDivElement | null>(null);
   const activeTurnIdRef = useRef<string | null>(null);
@@ -367,22 +372,22 @@ export const QaPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto relative">
+    <div className="space-y-5 max-w-4xl mx-auto relative pb-4">
       {/* 极简顶栏 */}
-      <div className="flex items-center justify-between bg-white px-5 py-3.5 rounded-xl border border-slate-200/80 shadow-sm">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center">
-            <MessageSquareText className="w-4 h-4" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white px-5 py-4 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center shrink-0">
+            <MessageSquareText className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-sm font-bold text-slate-900">教务智能问答 (RAG)</h1>
-            <p className="text-[11px] text-slate-500">基于已录入课表与通知进行原文语义检索与溯源</p>
+            <h1 className="text-base sm:text-lg font-bold text-slate-900">教务智能问答 (RAG)</h1>
+            <p className="text-xs text-slate-500 mt-0.5">基于已录入课表与通知进行原文语义检索与溯源</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           {indexStatus && (
-            <span className="text-[11px] text-teal-700 bg-teal-50 px-2.5 py-1 rounded-md border border-teal-200/60 hidden sm:inline-block">
+            <span className="text-xs text-teal-700 bg-teal-50 px-3 py-1 rounded-lg border border-teal-200/60 hidden sm:inline-block">
               {indexStatus.chunkCount} 个切片 · {indexStatus.mode === 'embedding' ? '向量余弦' : 'BM25'}
             </span>
           )}
@@ -392,10 +397,10 @@ export const QaPage: React.FC = () => {
             type="button"
             onClick={handleNewConversation}
             disabled={streaming}
-            className="btn-secondary py-1 px-2.5 text-xs text-teal-700 bg-teal-50/70 hover:bg-teal-100/70 border-teal-200/80 flex items-center gap-1.5 transition"
+            className="btn-secondary py-1.5 px-3 text-xs sm:text-sm text-teal-700 bg-teal-50/70 hover:bg-teal-100/70 border-teal-200/80 flex items-center gap-1.5 transition"
             title="开启全新提问对话（历史记录可在侧边栏查看）"
           >
-            <Plus className="w-3.5 h-3.5 text-teal-600" />
+            <Plus className="w-4 h-4 text-teal-600" />
             <span>新会话</span>
           </button>
 
@@ -403,13 +408,13 @@ export const QaPage: React.FC = () => {
             type="button"
             onClick={handleRebuildIndex}
             disabled={indexing || streaming}
-            className="btn-secondary py-1 px-2.5 text-xs text-slate-600 hover:text-slate-900"
+            className="btn-secondary py-1.5 px-3 text-xs sm:text-sm text-slate-600 hover:text-slate-900"
             title="重新生成切片与向量索引"
           >
             {indexing ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-teal-600" />
+              <Loader2 className="w-4 h-4 animate-spin text-teal-600" />
             ) : (
-              <Database className="w-3.5 h-3.5" />
+              <Database className="w-4 h-4" />
             )}
             <span className="hidden sm:inline">{indexing ? '构建中...' : '重建切片索引'}</span>
           </button>
@@ -418,17 +423,17 @@ export const QaPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsHistoryOpen((prev) => !prev)}
-            className={`btn-secondary py-1 px-2.5 text-xs flex items-center gap-1.5 transition ${
+            className={`btn-secondary py-1.5 px-3 text-xs sm:text-sm flex items-center gap-1.5 transition ${
               isHistoryOpen
                 ? 'bg-teal-50 text-teal-700 border-teal-300'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
             title="查看历史问答记录"
           >
-            <History className="w-3.5 h-3.5 text-teal-600" />
+            <History className="w-4 h-4 text-teal-600" />
             <span>历史记录</span>
             {historyList.length > 0 && (
-              <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-slate-100 text-[10px] text-slate-600 font-semibold">
+              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-slate-100 text-xs text-slate-600 font-semibold">
                 {historyList.length}
               </span>
             )}
@@ -437,7 +442,7 @@ export const QaPage: React.FC = () => {
       </div>
 
       {indexError && (
-        <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between">
+        <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
             <span>{indexError}</span>
@@ -445,7 +450,7 @@ export const QaPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setIndexError(null)}
-            className="text-xs text-rose-600 underline"
+            className="text-xs text-rose-600 underline font-medium"
           >
             关闭
           </button>
@@ -455,58 +460,58 @@ export const QaPage: React.FC = () => {
       {/* 侧滑历史记录抽屉 */}
       {isHistoryOpen && (
         <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/30 backdrop-blur-xs transition-opacity animate-in fade-in">
-          <div className="w-full max-w-sm bg-white h-full shadow-2xl flex flex-col border-l border-slate-200">
+          <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col border-l border-slate-200">
             {/* 抽屉标题栏 */}
-            <div className="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
               <div className="flex items-center gap-2 text-slate-800">
-                <History className="w-4 h-4 text-teal-600" />
-                <h3 className="text-sm font-bold">历史问答记录</h3>
-                <span className="text-[11px] text-slate-400">({historyList.length})</span>
+                <History className="w-5 h-5 text-teal-600" />
+                <h3 className="text-base font-bold">历史问答记录</h3>
+                <span className="text-xs text-slate-400">({historyList.length})</span>
               </div>
               <div className="flex items-center gap-2">
                 {historyList.length > 0 && (
                   <button
                     type="button"
                     onClick={handleClearAllHistory}
-                    className="text-[11px] text-rose-600 hover:text-rose-700 hover:underline flex items-center gap-1"
+                    className="text-xs text-rose-600 hover:text-rose-700 hover:underline flex items-center gap-1 font-medium"
                     title="清空全部历史"
                   >
-                    <Trash2 className="w-3 h-3" />
+                    <Trash2 className="w-3.5 h-3.5" />
                     清空
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={() => setIsHistoryOpen(false)}
-                  className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
             {/* 抽屉列表内容 */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
               {historyLoading && historyList.length === 0 ? (
-                <div className="py-12 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                <div className="py-16 text-center text-sm text-slate-400 flex items-center justify-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin text-teal-600" />
                   <span>正在加载历史记录...</span>
                 </div>
               ) : historyList.length === 0 ? (
-                <div className="py-16 text-center space-y-2 text-slate-400">
-                  <Clock className="w-8 h-8 mx-auto stroke-[1.5] text-slate-300" />
-                  <p className="text-xs">暂无历史问答记录</p>
-                  <p className="text-[11px] text-slate-400">发起提问后，对话内容将自动归档</p>
+                <div className="py-20 text-center space-y-2 text-slate-400">
+                  <Clock className="w-9 h-9 mx-auto stroke-[1.5] text-slate-300" />
+                  <p className="text-sm font-medium">暂无历史问答记录</p>
+                  <p className="text-xs text-slate-400">发起提问后，对话内容将自动归档</p>
                 </div>
               ) : (
                 historyList.map((item) => (
                   <div
                     key={item.id}
                     onClick={() => handleSelectHistoryItem(item)}
-                    className="group p-3 rounded-xl border border-slate-200/80 hover:border-teal-300 hover:bg-teal-50/30 transition-all cursor-pointer relative"
+                    className="group p-3.5 rounded-xl border border-slate-200/80 hover:border-teal-300 hover:bg-teal-50/30 transition-all cursor-pointer relative shadow-2xs"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-xs font-semibold text-slate-800 group-hover:text-teal-900 line-clamp-2 leading-snug">
+                      <p className="text-sm font-semibold text-slate-800 group-hover:text-teal-900 line-clamp-2 leading-relaxed">
                         {item.question}
                       </p>
                       <button
@@ -515,16 +520,16 @@ export const QaPage: React.FC = () => {
                         className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition shrink-0"
                         title="删除此条记录"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
 
-                    <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400">
+                    <div className="mt-2.5 flex items-center justify-between text-xs text-slate-400">
                       <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-slate-400" />
+                        <Clock className="w-3.5 h-3.5 text-slate-400" />
                         {formatDisplayTime(item.createdAt)}
                       </span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200/60">
+                      <span className="text-xs px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 border border-slate-200/60 font-mono">
                         {item.retrievalMode === 'embedding' ? '向量余弦' : 'BM25'}
                       </span>
                     </div>
@@ -537,70 +542,83 @@ export const QaPage: React.FC = () => {
       )}
 
       {/* 对话列表区 */}
-      <div className="space-y-4 min-h-[380px]">
+      <div className="space-y-5 min-h-[400px]">
         {turns.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 text-center space-y-5">
-            <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto">
-              <Sparkles className="w-6 h-6" />
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-10 text-center space-y-6 shadow-xs">
+            <div className="w-14 h-14 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto shadow-inner">
+              <Sparkles className="w-7 h-7" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-800">关于学期日程，随时提问</h2>
-              <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-                基于已录入课表与通知进行智能问答，可查询课程安排、冲突排查、考试截止与复习建议
+              <h2 className="text-lg sm:text-xl font-bold text-slate-800">关于学期日程，随时提问</h2>
+              <p className="text-sm text-slate-500 mt-1.5 max-w-lg mx-auto leading-relaxed">
+                基于已录入课表与通知进行语义检索，可查询课程地点、空闲排查、考试倒计时与核心考点
               </p>
             </div>
 
-            {/* 分组式建议提问 */}
-            <div className="pt-2 space-y-4 max-w-2xl mx-auto text-left">
-              {QUICK_QUESTION_GROUPS.map((group) => (
-                <div key={group.tag} className="space-y-1.5">
-                  <div className="flex items-center gap-1.5 px-1 text-[11px] font-semibold text-slate-500">
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
-                    <span>{group.tag}</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {group.questions.map((q) => (
-                      <button
-                        key={q}
-                        type="button"
-                        onClick={() => void askQuestion(q)}
-                        disabled={streaming}
-                        className="p-2.5 rounded-xl bg-slate-50/80 hover:bg-teal-50/80 border border-slate-200/80 hover:border-teal-300 text-xs text-slate-700 hover:text-teal-900 transition text-left flex items-center justify-between group shadow-2xs"
-                      >
-                        <span className="truncate pr-2">{q}</span>
-                        <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-teal-600 group-hover:translate-x-0.5 transition-all shrink-0" />
-                      </button>
-                    ))}
-                  </div>
+            {/* 精选动态提示词（仅保留 1~3 个动态生成带变量的提示词，支持换一换） */}
+            <div className="pt-2 max-w-2xl mx-auto space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-600">
+                  <Sparkles className="w-4 h-4 text-teal-600" />
+                  <span>推荐提问（包含动态变量）</span>
                 </div>
-              ))}
+                <button
+                  type="button"
+                  onClick={handleShufflePrompts}
+                  className="inline-flex items-center gap-1.5 text-xs text-teal-700 hover:text-teal-800 px-2.5 py-1 rounded-lg hover:bg-teal-50 transition font-medium"
+                  title="随机切换推荐提示词"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-teal-600 transition-transform active:rotate-180" />
+                  <span>换一换</span>
+                </button>
+              </div>
+
+              <div className="space-y-2.5">
+                {suggestedPrompts.map((item, idx) => (
+                  <button
+                    key={`${item.category}-${idx}`}
+                    type="button"
+                    onClick={() => void askQuestion(item.text)}
+                    disabled={streaming}
+                    className="w-full p-3.5 rounded-xl bg-slate-50/70 hover:bg-teal-50/70 border border-slate-200/90 hover:border-teal-300 text-slate-800 hover:text-teal-950 transition text-left flex items-center justify-between gap-3 group shadow-2xs cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="shrink-0 text-xs font-semibold px-2.5 py-0.5 rounded-lg bg-teal-50 text-teal-700 border border-teal-200/70 group-hover:bg-teal-100/80">
+                        {item.category}
+                      </span>
+                      <span className="text-sm sm:text-base font-medium truncate">{item.text}</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-teal-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         ) : (
           turns.map((turn) => {
             const isStreamingThis = turn.status === 'streaming';
             return (
-              <div key={turn.id} id={`turn-${turn.id}`} className="space-y-3 scroll-mt-20">
+              <div key={turn.id} id={`turn-${turn.id}`} className="space-y-3.5 scroll-mt-20">
                 {/* 用户提问气泡 */}
-                <div className="flex justify-end items-start gap-2">
-                  <div className="bg-teal-600 text-white rounded-2xl rounded-tr-sm px-4 py-2.5 text-xs max-w-[85%] shadow-xs leading-relaxed">
+                <div className="flex justify-end items-start gap-2.5">
+                  <div className="bg-teal-600 text-white rounded-2xl rounded-tr-xs px-4 sm:px-5 py-3 text-sm sm:text-base max-w-[85%] shadow-xs leading-relaxed">
                     {turn.question}
                   </div>
-                  <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center shrink-0 text-xs">
+                  <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center shrink-0 mt-0.5">
                     <User className="w-4 h-4" />
                   </div>
                 </div>
 
                 {/* 助手回答卡片 */}
-                <div className="flex items-start gap-2.5">
-                  <div className="w-7 h-7 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 border border-teal-200/60 text-xs mt-0.5">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 border border-teal-200/60 mt-0.5">
                     <Bot className="w-4 h-4" />
                   </div>
 
-                  <div className="flex-1 bg-white rounded-2xl rounded-tl-sm border border-slate-200/80 p-4 shadow-xs space-y-3">
+                  <div className="flex-1 bg-white rounded-2xl rounded-tl-xs border border-slate-200/80 p-4 sm:p-5 shadow-xs space-y-3.5">
                     {isStreamingThis && !turn.answer && (
-                      <div className="flex items-center gap-2 text-xs text-slate-500 py-1">
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-teal-600" />
+                      <div className="flex items-center gap-2 text-sm text-slate-500 py-1.5">
+                        <Loader2 className="w-4 h-4 animate-spin text-teal-600" />
                         <span>正在检索教务切片并生成回答...</span>
                       </div>
                     )}
@@ -609,14 +627,14 @@ export const QaPage: React.FC = () => {
                     {turn.answer && <MarkdownAnswer content={turn.answer} />}
 
                     {turn.status === 'error' && (
-                      <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between">
+                      <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm flex items-center justify-between">
                         <span>{turn.errorMessage || '问答生成异常'}</span>
                         <button
                           type="button"
                           onClick={() => handleRetryTurn(turn.question)}
-                          className="btn-secondary py-1 px-2 text-xs text-rose-700 border-rose-300 hover:bg-rose-100 flex items-center gap-1"
+                          className="btn-secondary py-1 px-2.5 text-xs text-rose-700 border-rose-300 hover:bg-rose-100 flex items-center gap-1"
                         >
-                          <RotateCcw className="w-3 h-3" />
+                          <RotateCcw className="w-3.5 h-3.5" />
                           重试
                         </button>
                       </div>
@@ -631,7 +649,7 @@ export const QaPage: React.FC = () => {
                     )}
 
                     {turn.status === 'done' && (
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[10px] text-slate-400">
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs text-slate-400">
                         <div className="flex items-center gap-2">
                           <span>
                             {turn.retrievalMode === 'embedding'
@@ -645,7 +663,7 @@ export const QaPage: React.FC = () => {
 
                         <div className="flex items-center gap-2">
                           {turn.promptTokens !== undefined && (
-                            <span>
+                            <span className="font-mono">
                               Tokens: {turn.promptTokens} + {turn.completionTokens}
                             </span>
                           )}
@@ -656,7 +674,7 @@ export const QaPage: React.FC = () => {
                               className="text-slate-400 hover:text-rose-500 transition ml-1"
                               title="删除此条记录"
                             >
-                              <Trash2 className="w-3 h-3" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           )}
                         </div>
@@ -671,28 +689,39 @@ export const QaPage: React.FC = () => {
         <div ref={turnsEndRef} />
       </div>
 
-      {/* 底部追问快捷气泡（对话进行中时提供） */}
+      {/* 底部追问快捷气泡（对话进行中时提供 2~3 个动态带变量提示词 + 换一换） */}
       {turns.length > 0 && (
-        <div className="flex items-center gap-1.5 overflow-x-auto py-1 px-1 scrollbar-none text-[11px]">
-          <span className="text-slate-400 shrink-0 text-[10px] mr-1">快捷提问:</span>
-          {QUICK_QUESTIONS.slice(0, 6).map((q) => (
+        <div className="flex items-center gap-2 overflow-x-auto py-1 px-1 scrollbar-none text-xs">
+          <span className="text-slate-400 shrink-0 mr-0.5">快捷提问:</span>
+          {suggestedPrompts.slice(0, 2).map((item, idx) => (
             <button
-              key={q}
+              key={`${item.text}-${idx}`}
               type="button"
-              onClick={() => void askQuestion(q)}
+              onClick={() => void askQuestion(item.text)}
               disabled={streaming}
-              className="shrink-0 px-2.5 py-1 rounded-full bg-white hover:bg-teal-50 border border-slate-200/80 hover:border-teal-300 text-slate-600 hover:text-teal-900 transition text-[11px] shadow-2xs"
+              className="shrink-0 px-3 py-1.5 rounded-full bg-white hover:bg-teal-50 border border-slate-200/80 hover:border-teal-300 text-slate-700 hover:text-teal-900 transition text-xs shadow-2xs flex items-center gap-1.5"
             >
-              {q}
+              <span className="text-[10px] px-1.5 py-0.2 rounded bg-teal-50 text-teal-700 font-semibold">
+                {item.category}
+              </span>
+              <span>{item.text}</span>
             </button>
           ))}
+          <button
+            type="button"
+            onClick={handleShufflePrompts}
+            className="shrink-0 p-1.5 rounded-full hover:bg-slate-200/60 text-slate-500 hover:text-teal-700 transition"
+            title="换一换提示词"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
       {/* 底部输入框 */}
       <form
         onSubmit={handleFormSubmit}
-        className="sticky bottom-4 bg-white p-2 rounded-2xl border border-slate-200 shadow-md flex items-center gap-2"
+        className="sticky bottom-4 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-md flex items-center gap-2"
       >
         <input
           type="text"
@@ -700,26 +729,26 @@ export const QaPage: React.FC = () => {
           onChange={(e) => setQuestionInput(e.target.value)}
           placeholder={streaming ? '正在回答中...' : '输入关于课程、考试、截止时间的疑问...'}
           disabled={streaming}
-          className="flex-1 px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none bg-transparent"
+          className="flex-1 px-4 py-2 text-sm sm:text-base text-slate-800 placeholder:text-slate-400 focus:outline-none bg-transparent"
         />
 
         {streaming ? (
           <button
             type="button"
             onClick={abortStream}
-            className="p-2 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition"
+            className="p-2.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition"
             title="停止生成"
           >
-            <Square className="w-4 h-4" />
+            <Square className="w-5 h-5" />
           </button>
         ) : (
           <button
             type="submit"
             disabled={!questionInput.trim()}
-            className="p-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white transition disabled:opacity-40 disabled:hover:bg-teal-600"
+            className="p-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white transition disabled:opacity-40 disabled:hover:bg-teal-600"
             title="发送问题"
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-5 h-5" />
           </button>
         )}
       </form>

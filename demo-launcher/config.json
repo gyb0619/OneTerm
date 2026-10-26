@@ -31,14 +31,8 @@
       "demoStudent": {
         "username": "示例信息",
         "password": "Demo@123456",
-        "role": "USER",
-        "description": "默认演示账号，预置9项完整高校教务日程与考前复习路径"
-      },
-      "admin": {
-        "username": "admin",
-        "password": "Admin@123456",
         "role": "ADMIN",
-        "description": "系统管理员账号，可管理大模型配置与用户限额"
+        "description": "系统主管理员账号，具备全站大模型配置、用户限额管理与全景教务规划权限"
       }
     },
     "sampleFiles": {

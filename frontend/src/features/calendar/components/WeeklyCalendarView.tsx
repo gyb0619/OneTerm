@@ -170,21 +170,21 @@ export const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
             >
               {/* 列头：星期 + 日期 */}
               <div
-                className={`px-3 py-2.5 border-b border-slate-100 flex items-center justify-between ${
+                className={`px-3.5 py-2.5 border-b border-slate-100 flex items-center justify-between ${
                   hasConflictToday ? 'bg-red-50/70' : 'bg-slate-50/60'
                 }`}
               >
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-slate-800">{day.weekdayLabel}</span>
+                  <span className="text-xs sm:text-sm font-bold text-slate-800">{day.weekdayLabel}</span>
                   <span className="text-xs font-mono text-slate-500">{day.monthDay}</span>
                 </div>
                 {hasConflictToday ? (
-                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-700">
-                    <AlertCircle className="w-3 h-3" />
+                  <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-xs font-semibold bg-red-100 text-red-700">
+                    <AlertCircle className="w-3.5 h-3.5" />
                     有冲突
                   </span>
                 ) : (
-                  <span className="text-[11px] text-slate-400">
+                  <span className="text-xs text-slate-400">
                     {dayEvents.length + dayReviews.length > 0
                       ? `${dayEvents.length + dayReviews.length} 项`
                       : '空闲'}
@@ -193,7 +193,7 @@ export const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
               </div>
 
               {/* 当日卡片列表 */}
-              <div className="p-2 space-y-2 flex-1">
+              <div className="p-2.5 space-y-2.5 flex-1">
                 {dayEvents.map((ev) => {
                   const meta = EVENT_TYPE_META[ev.type] || EVENT_TYPE_META.notice;
                   const startParts = parseEventDateTimeParts(ev.startTime);
@@ -212,37 +212,37 @@ export const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') handleEventClick(ev);
                       }}
-                      className={`rounded-lg border p-2.5 text-left cursor-pointer transition-all ${
+                      className={`rounded-xl border p-3 text-left cursor-pointer transition-all ${
                         meta.cardClass
                       } ${
                         isHighlighted
                           ? 'ring-2 ring-brand-600 shadow-md scale-[1.02]'
-                          : 'shadow-sm'
+                          : 'shadow-2xs'
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-1 mb-1">
+                      <div className="flex items-center justify-between gap-1.5 mb-1.5">
                         <span
-                          className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${meta.badgeClass}`}
+                          className={`text-xs px-2 py-0.5 rounded-md border font-semibold ${meta.badgeClass}`}
                         >
                           {meta.label}
                         </span>
-                        <span className="text-[11px] font-mono font-medium opacity-80">
+                        <span className="text-xs font-mono font-medium opacity-85">
                           {startParts.timeStr}-{endParts.timeStr}
                         </span>
                       </div>
 
-                      <div className="text-xs font-bold leading-snug break-words">{ev.title}</div>
+                      <div className="text-xs sm:text-sm font-bold leading-snug break-words">{ev.title}</div>
 
                       {ev.location && (
-                        <div className="mt-1 flex items-center gap-1 text-[11px] opacity-80 truncate">
-                          <MapPin className="w-3 h-3 shrink-0" />
+                        <div className="mt-1.5 flex items-center gap-1.5 text-xs opacity-80 truncate">
+                          <MapPin className="w-3.5 h-3.5 shrink-0" />
                           <span className="truncate">{ev.location}</span>
                         </div>
                       )}
 
                       {isConflicting && (
-                        <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold text-red-700 bg-red-100/90 px-1.5 py-0.5 rounded">
-                          <AlertCircle className="w-3 h-3" />
+                        <div className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-red-700 bg-red-100/90 px-2 py-0.5 rounded-md">
+                          <AlertCircle className="w-3.5 h-3.5" />
                           时间冲突
                         </div>
                       )}
@@ -254,32 +254,32 @@ export const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
                 {dayReviews.map((rt) => (
                   <div
                     key={`review-${rt.id}`}
-                    className={`rounded-lg border border-l-4 p-2.5 transition-all shadow-sm ${
+                    className={`rounded-xl border border-l-4 p-3 transition-all shadow-2xs ${
                       rt.done
                         ? 'bg-slate-50 border-slate-200 border-l-slate-400 text-slate-500'
                         : 'bg-indigo-50/90 border-indigo-200 border-l-indigo-500 text-indigo-950'
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-1 mb-1">
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 border border-indigo-200 font-semibold">
+                    <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                      <span className="text-xs px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700 border border-indigo-200 font-semibold">
                         考前复习
                       </span>
                       <button
                         type="button"
                         onClick={() => onToggleReviewTopicDone(rt)}
-                        className="inline-flex items-center gap-0.5 text-[11px] font-medium text-indigo-700 hover:text-indigo-900"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-indigo-700 hover:text-indigo-900"
                         title={rt.done ? '标记为未完成' : '标记为已完成'}
                       >
                         {rt.done ? (
-                          <CheckSquare className="w-3.5 h-3.5 text-emerald-600" />
+                          <CheckSquare className="w-4 h-4 text-emerald-600" />
                         ) : (
-                          <Square className="w-3.5 h-3.5" />
+                          <Square className="w-4 h-4" />
                         )}
                       </button>
                     </div>
 
                     <div
-                      className={`text-xs font-bold leading-snug ${
+                      className={`text-xs sm:text-sm font-bold leading-snug ${
                         rt.done ? 'line-through opacity-75' : ''
                       }`}
                     >
@@ -287,8 +287,8 @@ export const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
                     </div>
 
                     {(rt.courseName || rt.eventTitle) && (
-                      <div className="mt-1 flex items-center gap-1 text-[11px] opacity-80 truncate">
-                        <BookOpen className="w-3 h-3 shrink-0" />
+                      <div className="mt-1.5 flex items-center gap-1.5 text-xs opacity-80 truncate">
+                        <BookOpen className="w-3.5 h-3.5 shrink-0" />
                         <span className="truncate">{rt.courseName || rt.eventTitle}</span>
                       </div>
                     )}
@@ -296,9 +296,9 @@ export const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
                     <button
                       type="button"
                       onClick={() => onNavigateToVisualize(rt)}
-                      className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-indigo-700 hover:text-indigo-900 underline-offset-2 hover:underline"
+                      className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-indigo-700 hover:text-indigo-900 underline-offset-2 hover:underline"
                     >
-                      <Sparkles className="w-3 h-3" />
+                      <Sparkles className="w-3.5 h-3.5" />
                       可视化工坊
                     </button>
                   </div>

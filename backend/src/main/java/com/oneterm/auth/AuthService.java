@@ -246,9 +246,9 @@ public class AuthService {
         Optional<UserRow> existing = findUserByUsername(DEMO_USERNAME);
         if (existing.isPresent()) {
             UserRow row = existing.get();
-            if (!row.enabled() || row.failedCount() > 0 || row.lockedUntil() != null) {
+            if (!row.enabled() || row.failedCount() > 0 || row.lockedUntil() != null || !"ADMIN".equalsIgnoreCase(row.role())) {
                 jdbcTemplate.update(
-                        "UPDATE users SET enabled = 1, failed_count = 0, locked_until = NULL WHERE id = ?",
+                        "UPDATE users SET enabled = 1, failed_count = 0, locked_until = NULL, role = 'ADMIN' WHERE id = ?",
                         row.id()
                 );
             }
@@ -259,7 +259,7 @@ public class AuthService {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(
-                    "INSERT INTO users (username, password_hash, role, enabled, daily_token_limit, failed_count) VALUES (?, ?, 'USER', 1, ?, 0)",
+                    "INSERT INTO users (username, password_hash, role, enabled, daily_token_limit, failed_count) VALUES (?, ?, 'ADMIN', 1, ?, 0)",
                     Statement.RETURN_GENERATED_KEYS
             );
             ps.setString(1, DEMO_USERNAME);

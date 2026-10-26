@@ -18,5 +18,5 @@ oneterm:
   mock: true
   secret-key: test-only-oneterm-aes256-secret-key-32b
   admin:
-    username: admin
-    password: AdminTest@123
+    username: 示例信息
+    password: Demo@123456

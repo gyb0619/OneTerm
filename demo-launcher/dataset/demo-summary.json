@@ -6,16 +6,9 @@
     "student": {
       "username": "示例信息",
       "password": "Demo@123456",
-      "role": "USER",
-      "dailyTokenLimit": 100000,
-      "description": "默认演示账户，包含 9 项日程、向量切片、复习路径与可视化仿真"
-    },
-    "admin": {
-      "username": "admin",
-      "password": "Admin@123456",
       "role": "ADMIN",
       "dailyTokenLimit": 100000,
-      "description": "系统管理员，可在线配置大模型参数、用户额度管理与系统审计日志"
+      "description": "系统主管理员账户，具备系统管理、9 项日程、向量切片、复习路径与可视化仿真全量权限"
     }
   },
   "courses": [

@@ -202,11 +202,6 @@ export const ExtractPage: React.FC = () => {
     void handleParseTimetable(file);
   };
 
-  const handleLoadSampleTimetable = () => {
-    setTimetableFile(null);
-    void handleParseTimetable(null);
-  };
-
   // --- AI 流式抽取处理器 ---
   const handleFillSampleText = () => {
     setRawText(SAMPLE_SEMESTER_TEXT);
@@ -430,44 +425,44 @@ export const ExtractPage: React.FC = () => {
   return (
     <div className="space-y-5 max-w-7xl mx-auto">
       {/* 顶部轻量化导览与模式切换 */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <div className="space-y-0.5">
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg font-bold text-slate-900">教务日程导入与抽取</h1>
-            <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-teal-50 text-teal-700 border border-teal-200">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900">教务日程导入与抽取</h1>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-700 border border-teal-200">
               学期周次算法 · RAG 向量就绪
             </span>
           </div>
-          <p className="text-xs text-slate-500">
-            支持高校真实周次课表（.xls / .xlsx 按周展开计算）与多格式大模型流式识别
+          <p className="text-xs sm:text-sm text-slate-500">
+            支持高校真实周次课表（.xls / .xlsx 按周展开计算）与多格式智能流式识别
           </p>
         </div>
 
         {/* 模式切换胶囊 */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg self-start sm:self-auto">
+        <div className="flex items-center gap-1.5 bg-slate-100/80 p-1.5 rounded-2xl self-start sm:self-auto">
           <button
             type="button"
             onClick={() => setMode('timetable')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition ${
               mode === 'timetable'
-                ? 'bg-white text-teal-700 shadow-sm'
+                ? 'bg-white text-teal-700 shadow-xs font-semibold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Calendar className="w-3.5 h-3.5 text-teal-600" />
+            <Calendar className="w-4 h-4 text-teal-600" />
             周次课表解析 (.xls/.xlsx)
           </button>
           <button
             type="button"
             onClick={() => setMode('ai')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition ${
               mode === 'ai'
-                ? 'bg-white text-teal-700 shadow-sm'
+                ? 'bg-white text-teal-700 shadow-xs font-semibold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-sky-600" />
-            AI 智能流式抽取
+            <Sparkles className="w-4 h-4 text-sky-600" />
+            智能流式抽取
           </button>
         </div>
       </div>
@@ -477,18 +472,18 @@ export const ExtractPage: React.FC = () => {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
             {/* 学期基准参数 */}
-            <div className="flex flex-wrap items-center gap-3 text-xs">
-              <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-3.5 text-xs sm:text-sm">
+              <div className="flex items-center gap-2">
                 <span className="text-slate-500 font-medium">开学第一周周一：</span>
                 <input
                   type="date"
                   value={semesterStartDate}
                   onChange={(e) => setSemesterStartDate(e.target.value)}
-                  className="px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-mono text-slate-800 bg-slate-50 focus:bg-white focus:border-teal-500"
+                  className="px-3 py-1.5 border border-slate-300 rounded-xl text-xs sm:text-sm font-mono text-slate-800 bg-slate-50 focus:bg-white focus:border-teal-500"
                 />
               </div>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <span className="text-slate-500 font-medium">计算周次：</span>
                 <input
                   type="number"
@@ -496,7 +491,7 @@ export const ExtractPage: React.FC = () => {
                   max={endWeek}
                   value={startWeek}
                   onChange={(e) => setStartWeek(Number(e.target.value))}
-                  className="w-16 px-2 py-1.5 border border-slate-300 rounded-lg text-xs font-mono text-center text-slate-800 bg-slate-50 focus:bg-white"
+                  className="w-16 px-2.5 py-1.5 border border-slate-300 rounded-xl text-xs sm:text-sm font-mono text-center text-slate-800 bg-slate-50 focus:bg-white"
                 />
                 <span className="text-slate-400">至</span>
                 <input
@@ -505,34 +500,24 @@ export const ExtractPage: React.FC = () => {
                   max={30}
                   value={endWeek}
                   onChange={(e) => setEndWeek(Number(e.target.value))}
-                  className="w-16 px-2 py-1.5 border border-slate-300 rounded-lg text-xs font-mono text-center text-slate-800 bg-slate-50 focus:bg-white"
+                  className="w-16 px-2.5 py-1.5 border border-slate-300 rounded-xl text-xs sm:text-sm font-mono text-center text-slate-800 bg-slate-50 focus:bg-white"
                 />
-                <span className="text-slate-500">周</span>
+                <span className="text-slate-500 font-medium">周</span>
               </div>
             </div>
 
-            {/* 文件操作与示例载入 */}
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={handleLoadSampleTimetable}
-                disabled={parsingTimetable}
-                className="btn-secondary py-1.5 px-3 text-xs text-teal-700 border-teal-200 bg-teal-50/50 hover:bg-teal-50"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-teal-600" />
-                载入《计算机(中加)2501》课表示例
-              </button>
-
+            {/* 文件操作与按周计算 */}
+            <div className="flex flex-wrap items-center gap-2.5">
               <button
                 type="button"
                 onClick={() => timetableInputRef.current?.click()}
                 disabled={parsingTimetable}
-                className="btn-secondary py-1.5 px-3 text-xs"
+                className="btn-secondary py-2 px-3.5 text-sm"
               >
                 {parsingTimetable ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-teal-600" />
+                  <Loader2 className="w-4 h-4 animate-spin text-teal-600" />
                 ) : (
-                  <FileUp className="w-3.5 h-3.5 text-sky-600" />
+                  <FileUp className="w-4 h-4 text-sky-600" />
                 )}
                 {timetableFile ? timetableFile.name : '上传本地课表 (.xls / .xlsx)'}
               </button>

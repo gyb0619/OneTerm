@@ -113,11 +113,8 @@ start-demo.bat stop
     "accounts": {
       "demoStudent": {
         "username": "示例信息",
-        "password": "Demo@123456"
-      },
-      "admin": {
-        "username": "admin",
-        "password": "Admin@123456"
+        "password": "Demo@123456",
+        "role": "ADMIN"
       }
     },
     "sampleFiles": {
@@ -136,8 +133,7 @@ start-demo.bat stop
 
 ## 五、预置演示数据摘要
 
-* **默认演示账号**：`示例信息` / `Demo@123456`
-* **管理员账号**：`admin` / `Admin@123456`
+* **主管理员账号**：`示例信息` / `Demo@123456`（具备 ADMIN 最高管理权限）
 * **典型课程**：
   * 《算法设计与分析》（包含 11-04 课程、期中随堂测验与 11-11 实验报告截止）
   * 《操作系统》（包含 11-04 课程紧接算法课首尾相接、11-06 期中上机考核）

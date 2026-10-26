@@ -262,46 +262,46 @@ export const CalendarPage: React.FC = () => {
   return (
     <div className="space-y-4">
       {/* 顶部现代化操作条：精简分段选项卡与周次切换 */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-3 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
         {/* 视图选项卡 */}
-        <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl w-full md:w-auto">
+        <div className="flex items-center gap-1.5 bg-slate-100/80 p-1.5 rounded-2xl w-full md:w-auto">
           <button
             type="button"
             onClick={() => setActiveTab('weekly')}
-            className={`flex-1 md:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
               activeTab === 'weekly'
-                ? 'bg-white text-teal-700 font-semibold shadow-sm'
+                ? 'bg-white text-teal-700 font-semibold shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <CalendarIcon className="w-3.5 h-3.5" />
+            <CalendarIcon className="w-4 h-4" />
             周课表
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('workload')}
-            className={`flex-1 md:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
               activeTab === 'workload'
-                ? 'bg-white text-teal-700 font-semibold shadow-sm'
+                ? 'bg-white text-teal-700 font-semibold shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <BarChart3 className="w-3.5 h-3.5" />
+            <BarChart3 className="w-4 h-4" />
             学期热力 & 负载
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('review')}
-            className={`flex-1 md:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
               activeTab === 'review'
-                ? 'bg-white text-teal-700 font-semibold shadow-sm'
+                ? 'bg-white text-teal-700 font-semibold shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Layers className="w-3.5 h-3.5" />
+            <Layers className="w-4 h-4" />
             考前复习规划
             {overview?.reviewTopics && overview.reviewTopics.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-teal-100 text-teal-800">
+              <span className="ml-1.5 px-2 py-0.5 rounded-full text-xs bg-teal-100 text-teal-800 font-semibold">
                 {overview.reviewTopics.length}
               </span>
             )}
@@ -309,23 +309,23 @@ export const CalendarPage: React.FC = () => {
         </div>
 
         {/* 右侧：周次快速跳选器与快捷按钮 */}
-        <div className="flex flex-wrap items-center justify-end gap-2 w-full md:w-auto text-xs">
+        <div className="flex flex-wrap items-center justify-end gap-2 w-full md:w-auto text-xs sm:text-sm">
           {/* 周次导航器 */}
           {activeTab === 'weekly' && (
-            <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-0.5">
+            <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-1">
               <button
                 type="button"
                 onClick={handlePrevWeek}
                 className="p-1.5 hover:bg-white rounded-lg text-slate-600 transition-colors"
                 title="上一周"
               >
-                <ChevronLeft className="w-3.5 h-3.5" />
+                <ChevronLeft className="w-4 h-4" />
               </button>
 
               <select
                 value={currentWeekNum}
                 onChange={(e) => handleSelectWeekNumber(Number(e.target.value))}
-                className="bg-transparent text-xs font-bold text-slate-800 py-1 px-2 cursor-pointer focus:outline-none"
+                className="bg-transparent text-sm font-bold text-slate-800 py-1 px-2.5 cursor-pointer focus:outline-none"
               >
                 {Array.from({ length: DEFAULT_TOTAL_WEEKS }, (_, i) => i + 1).map((w) => (
                   <option key={w} value={w}>
@@ -340,7 +340,7 @@ export const CalendarPage: React.FC = () => {
                 className="p-1.5 hover:bg-white rounded-lg text-slate-600 transition-colors"
                 title="下一周"
               >
-                <ChevronRight className="w-3.5 h-3.5" />
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           )}
