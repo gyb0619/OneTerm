@@ -1,0 +1,86 @@
+{
+  "systemName": "OneTerm (一学期)",
+  "version": "1.0.0",
+  "generatedAt": "2026-10-26T10:48:00+08:00",
+  "profiles": {
+    "student": {
+      "username": "demo_student",
+      "password": "Demo@123456",
+      "role": "USER",
+      "dailyTokenLimit": 100000,
+      "description": "预置标准演示学生账户，包含 9 项日程、向量切片、复习路径与可视化仿真"
+    },
+    "admin": {
+      "username": "admin",
+      "password": "Admin@123456",
+      "role": "ADMIN",
+      "dailyTokenLimit": 100000,
+      "description": "系统管理员，可在线配置大模型参数、用户额度管理与系统审计日志"
+    }
+  },
+  "courses": [
+    {
+      "name": "算法设计与分析",
+      "teacher": "林教授",
+      "classroom": "教学楼 A302",
+      "weeklyClass": "2026-11-04 08:00 - 09:40",
+      "exam": {
+        "title": "期中随堂测验",
+        "time": "2026-11-04 15:00 - 17:00",
+        "location": "教学楼 C101"
+      },
+      "deadline": {
+        "title": "第二次实验报告截止",
+        "time": "2026-11-11 22:00 - 23:59",
+        "location": "课程中心线上提交"
+      }
+    },
+    {
+      "name": "操作系统",
+      "teacher": "陈老师",
+      "classroom": "教学楼 A302",
+      "weeklyClass": "2026-11-04 09:40 - 11:20 (紧接算法课，首尾相接无冲突)",
+      "exam": {
+        "title": "期中上机考核",
+        "time": "2026-11-06 19:00 - 21:00",
+        "location": "信息中心机房 D401",
+        "conflictWith": "ACM 协会秋季招新沙龙"
+      }
+    },
+    {
+      "name": "计算机网络",
+      "teacher": "王老师",
+      "classroom": "实验楼 B205",
+      "weeklyClass": "2026-11-04 14:00 - 16:00 (实验课)",
+      "exam": {
+        "title": "期末统考",
+        "time": "2026-11-13 09:00 - 11:00",
+        "location": "第一教学楼 A105"
+      },
+      "deadline": {
+        "title": "抓包实验分析报告截止",
+        "time": "2026-11-12 20:00 - 22:00",
+        "location": "课程中心线上提交"
+      }
+    }
+  ],
+  "conflicts": [
+    {
+      "date": "2026-11-04",
+      "overlapTime": "15:00 - 16:00",
+      "eventA": "《计算机网络》实验课 (14:00 - 16:00)",
+      "eventB": "《算法设计与分析》期中随堂测验 (15:00 - 17:00)",
+      "type": "部分重叠冲突"
+    },
+    {
+      "date": "2026-11-06",
+      "overlapTime": "19:00 - 21:00",
+      "eventA": "《操作系统》期中上机考核 (19:00 - 21:00)",
+      "eventB": "ACM 协会秋季招新沙龙暨算法分享会 (19:00 - 21:00)",
+      "type": "完全重叠冲突"
+    }
+  ],
+  "sampleTimetableFile": "dataset/timetable-sample.xls",
+  "sampleNoticeFile": "dataset/raw-notice.txt",
+  "sampleStructuredEventsFile": "dataset/expected-events.json"
+}

@@ -8,6 +8,9 @@
 
 ## 一、10 分钟快速复现指南
 
+### 0. Windows 示例环境独立启动器（BAT + JSON 一键直达）
+在 Windows 环境下直接双击根目录的 **`start-demo.bat`** 即可打开交互式控制台，支持自动启动服务、一键装载全套预置示例数据（9 项经典日程事件、真实周次课表、全科复习考点与交互仿真）并自动唤起浏览器。详细配置与数据集说明请参阅 [demo-launcher/README.md](demo-launcher/README.md)。
+
 ### 1. 环境要求
 - **Docker 方式（推荐）**：Docker 24+ 与 Docker Compose v2+
 - **本地源码方式**：

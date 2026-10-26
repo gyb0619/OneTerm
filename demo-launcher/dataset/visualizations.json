@@ -1,0 +1,16 @@
+{
+  "presets": [
+    {
+      "topic": "冒泡排序",
+      "course": "算法设计与分析",
+      "description": "基于原生 JavaScript 和 HTML5 Canvas 的柱状图动态排序步进动画与复杂度对比",
+      "promptVersion": "v1.0"
+    },
+    {
+      "topic": "TCP 三次握手",
+      "course": "计算机网络",
+      "description": "客户端与服务端状态机（LISTEN / SYN_SENT / SYN_RCVD / ESTABLISHED）时序交互与报文段动态飞行动画",
+      "promptVersion": "v1.0"
+    }
+  ]
+}

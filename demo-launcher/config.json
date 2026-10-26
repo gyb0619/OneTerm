@@ -1,0 +1,53 @@
+{
+  "system": {
+    "name": "OneTerm (一学期)",
+    "version": "1.0.0",
+    "description": "面向高校学期日程提取、周次课表展开、考前复习路径规划与交互式可视化的教务智能助手"
+  },
+  "server": {
+    "port": 8789,
+    "host": "localhost",
+    "healthEndpoint": "http://localhost:8789/",
+    "spaUrl": "http://localhost:8789",
+    "swaggerUrl": "http://localhost:8789/swagger-ui/index.html"
+  },
+  "frontend": {
+    "port": 5173,
+    "devUrl": "http://localhost:5173",
+    "autoStartDevServer": true
+  },
+  "database": {
+    "dbPath": "./data/oneterm.db"
+  },
+  "maven": {
+    "customCommand": "D:\\Code\\SM\\.crush-tools\\apache-maven-3.9.16\\bin\\mvn.cmd"
+  },
+  "demo": {
+    "autoLoadOnStart": true,
+    "autoOpenBrowser": true,
+    "targetBrowserUrl": "http://localhost:8789",
+    "loadDemoEndpoint": "http://localhost:8789/api/auth/demo-load",
+    "accounts": {
+      "demoStudent": {
+        "username": "demo_student",
+        "password": "Demo@123456",
+        "role": "USER",
+        "description": "普通演示学生账号，预置9项完整日程与复习路径"
+      },
+      "admin": {
+        "username": "admin",
+        "password": "Admin@123456",
+        "role": "ADMIN",
+        "description": "系统管理员账号，可管理大模型配置与用户限额"
+      }
+    },
+    "sampleFiles": {
+      "structuredEvents": "demo-launcher/dataset/expected-events.json",
+      "rawNoticeText": "demo-launcher/dataset/raw-notice.txt",
+      "excelTimetable": "demo-launcher/dataset/timetable-sample.xls",
+      "reviewTopics": "demo-launcher/dataset/review-topics.json",
+      "visualizations": "demo-launcher/dataset/visualizations.json",
+      "summary": "demo-launcher/dataset/demo-summary.json"
+    }
+  }
+}
