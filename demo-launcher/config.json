@@ -29,10 +29,10 @@
     "loadDemoEndpoint": "http://localhost:8789/api/auth/demo-load",
     "accounts": {
       "demoStudent": {
-        "username": "demo_student",
+        "username": "示例信息",
         "password": "Demo@123456",
         "role": "USER",
-        "description": "普通演示学生账号，预置9项完整日程与复习路径"
+        "description": "默认演示账号，预置9项完整高校教务日程与考前复习路径"
       },
       "admin": {
         "username": "admin",

@@ -171,9 +171,9 @@ class AuthAndSecurityTest {
 
     @Test
     void demoLoadIdempotentlySeedsEventsChunksReviewTopicsAndVisualizations() throws Exception {
-        // 清理原有 demo_student 数据
+        // 清理原有 示例信息 数据
         jdbcTemplate.query(
-                "SELECT id FROM users WHERE username = 'demo_student'",
+                "SELECT id FROM users WHERE username = '示例信息'",
                 (rs, rowNum) -> rs.getLong("id")
         ).forEach(uid -> {
             jdbcTemplate.update("DELETE FROM visualizations WHERE user_id = ?", uid);
@@ -186,7 +186,7 @@ class AuthAndSecurityTest {
         // 第一次调用 demo-load
         MvcResult firstRes = mockMvc.perform(post("/api/auth/demo-load"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("demo_student"))
+                .andExpect(jsonPath("$.username").value("示例信息"))
                 .andExpect(jsonPath("$.role").value("USER"))
                 .andReturn();
 

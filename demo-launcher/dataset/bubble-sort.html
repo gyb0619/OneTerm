@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>冒泡排序 (Bubble Sort) 交互式可视化</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #f8fafc; color: #0f172a; padding: 20px; }
+  .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(15,23,42,0.04); }
+  h2 { color: #0f766e; font-size: 18px; margin-bottom: 6px; }
+  .subtitle { color: #64748b; font-size: 13px; margin-bottom: 16px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; background: #f1f5f9; padding: 12px; border-radius: 8px; }
+  button { background: #0d9488; color: #fff; border: none; border-radius: 6px; padding: 7px 14px; font-size: 13px; cursor: pointer; transition: opacity 0.15s; }
+  button:hover { opacity: 0.9; }
+  button.secondary { background: #475569; }
+  .slider-group { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #334155; margin-left: auto; }
+  .stage { height: 220px; display: flex; align-items: flex-end; justify-content: center; gap: 10px; padding: 20px 12px 8px; border-bottom: 2px solid #cbd5e1; margin-bottom: 14px; }
+  .bar-wrap { display: flex; flex-direction: column; align-items: center; width: 42px; }
+  .bar { width: 100%; background: #38bdf8; border-radius: 6px 6px 0 0; transition: height 0.25s ease, background-color 0.2s ease; display: flex; align-items: flex-start; justify-content: center; color: #fff; font-weight: 600; font-size: 12px; padding-top: 4px; }
+  .bar.comparing { background: #f59e0b; transform: translateY(-4px); }
+  .bar.swapping { background: #ef4444; }
+  .bar.sorted { background: #10b981; }
+  .idx { font-size: 11px; color: #64748b; margin-top: 4px; }
+  .status { font-size: 13px; background: #ecfdf5; border-left: 4px solid #10b981; padding: 10px 12px; border-radius: 4px; color: #065f46; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>冒泡排序（Bubble Sort）交互式演示</h2>
+  <p class="subtitle">时间复杂度 O(n²) · 空间复杂度 O(1) · 稳定排序算法</p>
+  <div class="controls">
+    <button id="btnPlay">自动播放</button>
+    <button id="btnStep" class="secondary">单步执行</button>
+    <button id="btnReset" class="secondary">重置数组</button>
+    <div class="slider-group">
+      <label for="speedSlider">播放速度</label>
+      <input id="speedSlider" type="range" min="200" max="900" value="600" />
+    </div>
+  </div>
+  <div class="stage" id="stage"></div>
+  <div class="status" id="statusText">准备就绪，点击「自动播放」或「单步执行」观察相邻元素两两比较与冒泡上浮过程。</div>
+</div>
+<script>
+  const initialData = [45, 18, 62, 29, 77, 33, 10];
+  let arr = [...initialData];
+  let steps = [];
+  let stepIdx = 0;
+  let timer = null;
+
+  function buildSteps(input) {
+    const a = [...input];
+    const s = [{ a: [...a], i: -1, j: -1, sorted: [], msg: '初始数组序列就绪' }];
+    const n = a.length;
+    const sortedIndices = [];
+    for (let i = 0; i < n - 1; i++) {
+      for (let j = 0; j < n - 1 - i; j++) {
+        s.push({
+          a: [...a],
+          i: j,
+          j: j + 1,
+          swapping: false,
+          sorted: [...sortedIndices],
+          msg: `比较 arr[${j}]=${a[j]} 与 arr[${j+1}]=${a[j+1]}`
+        });
+        if (a[j] > a[j + 1]) {
+          const temp = a[j];
+          a[j] = a[j + 1];
+          a[j + 1] = temp;
+          s.push({
+            a: [...a],
+            i: j,
+            j: j + 1,
+            swapping: true,
+            sorted: [...sortedIndices],
+            msg: `因为 ${a[j+1]} > ${a[j]}，交换两个元素位置`
+          });
+        }
+      }
+      sortedIndices.push(n - 1 - i);
+    }
+    sortedIndices.push(0);
+    s.push({ a: [...a], i: -1, j: -1, sorted: sortedIndices, msg: '排序完成！所有元素已按升序排列。' });
+    return s;
+  }
+
+  function render(state) {
+    const stage = document.getElementById('stage');
+    stage.innerHTML = '';
+    const maxVal = Math.max(...state.a, 80);
+    state.a.forEach((val, idx) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'bar-wrap';
+      const bar = document.createElement('div');
+      bar.className = 'bar';
+      bar.style.height = `${(val / maxVal) * 170 + 20}px`;
+      bar.textContent = val;
+      if (state.sorted && state.sorted.includes(idx)) {
+        bar.classList.add('sorted');
+      } else if (idx === state.i || idx === state.j) {
+        bar.classList.add(state.swapping ? 'swapping' : 'comparing');
+      }
+      const label = document.createElement('div');
+      label.className = 'idx';
+      label.textContent = '[' + idx + ']';
+      wrap.appendChild(bar);
+      wrap.appendChild(label);
+      stage.appendChild(wrap);
+    });
+    document.getElementById('statusText').textContent = `步骤 ${stepIdx}/${steps.length - 1}：` + state.msg;
+  }
+
+  function reset() {
+    stopPlay();
+    arr = [...initialData];
+    steps = buildSteps(arr);
+    stepIdx = 0;
+    render(steps[0]);
+  }
+
+  function nextStep() {
+    if (stepIdx < steps.length - 1) {
+      stepIdx++;
+      render(steps[stepIdx]);
+    } else {
+      stopPlay();
+    }
+  }
+
+  function stopPlay() {
+    if (timer) { clearInterval(timer); timer = null; }
+    document.getElementById('btnPlay').textContent = '自动播放';
+  }
+
+  document.getElementById('btnStep').addEventListener('click', () => { stopPlay(); nextStep(); });
+  document.getElementById('btnReset').addEventListener('click', reset);
+  document.getElementById('btnPlay').addEventListener('click', () => {
+    if (timer) { stopPlay(); return; }
+    document.getElementById('btnPlay').textContent = '暂停';
+    const delay = 1000 - Number(document.getElementById('speedSlider').value);
+    timer = setInterval(nextStep, Math.max(100, delay));
+  });
+
+  reset();
+</script>
+</body>
+</html>

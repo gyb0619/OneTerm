@@ -112,7 +112,7 @@ start-demo.bat stop
     "targetBrowserUrl": "http://localhost:8789",
     "accounts": {
       "demoStudent": {
-        "username": "demo_student",
+        "username": "示例信息",
         "password": "Demo@123456"
       },
       "admin": {
@@ -136,7 +136,7 @@ start-demo.bat stop
 
 ## 五、预置演示数据摘要
 
-* **学生演示账号**：`demo_student` / `Demo@123456`
+* **默认演示账号**：`示例信息` / `Demo@123456`
 * **管理员账号**：`admin` / `Admin@123456`
 * **典型课程**：
   * 《算法设计与分析》（包含 11-04 课程、期中随堂测验与 11-11 实验报告截止）

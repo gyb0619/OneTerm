@@ -63,7 +63,6 @@ export const CalendarPage: React.FC = () => {
 
   const [scheduling, setScheduling] = useState<boolean>(false);
   const [exporting, setExporting] = useState<boolean>(false);
-  const [loadingDemo, setLoadingDemo] = useState<boolean>(false);
 
   const showToast = useCallback((msg: string) => {
     setToastMsg(msg);
@@ -247,20 +246,6 @@ export const CalendarPage: React.FC = () => {
     navigate(`/visualize?${params.toString()}`);
   };
 
-  const handleLoadDemo = async () => {
-    setLoadingDemo(true);
-    setErrorMsg(null);
-    try {
-      const profile = await calendarApi.loadDemoData();
-      setCurrentUser(profile);
-      await fetchOverview(false);
-      showToast('已一键载入标准学期示例数据');
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : '载入示例数据失败');
-    } finally {
-      setLoadingDemo(false);
-    }
-  };
 
   if (loading && !overview) {
     return (
@@ -427,9 +412,9 @@ export const CalendarPage: React.FC = () => {
         <div className="bg-white rounded-2xl border border-slate-200/80 p-8 shadow-sm">
           <EmptyState
             title="当前学期暂无课表日程"
-            description="您可以前往「课表导入」上传 .xls / .xlsx 课表或粘贴教务通知，亦可直接点击下方按钮免配置载入标准示例。"
-            actionLabel={loadingDemo ? '正在载入示例数据...' : '一键载入标准学期数据体验'}
-            onAction={handleLoadDemo}
+            description="您可以前往「课表导入」上传 .xls / .xlsx 课表或粘贴教务通知，系统将自动展开周次课表并进行智能分析。"
+            actionLabel="前往导入课表 / 通知"
+            onAction={() => navigate('/extract')}
           />
           <div className="flex justify-center gap-2.5 mt-4">
             <button

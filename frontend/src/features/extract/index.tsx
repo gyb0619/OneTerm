@@ -238,7 +238,7 @@ export const ExtractPage: React.FC = () => {
   const handleStartExtract = async () => {
     const trimmed = rawText.trim();
     if (!trimmed) {
-      setFileError('请先粘贴教务通知文本、点击「一键填入示例文本」或上传文件');
+      setFileError('请先粘贴教务通知文本或上传文件');
       return;
     }
     setFileError(null);

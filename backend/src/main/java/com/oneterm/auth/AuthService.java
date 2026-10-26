@@ -46,7 +46,7 @@ import java.util.Optional;
 public class AuthService {
 
     public static final ZoneId SHANGHAI_ZONE = ZoneId.of("Asia/Shanghai");
-    public static final String DEMO_USERNAME = "demo_student";
+    public static final String DEMO_USERNAME = "示例信息";
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final int LOCK_MINUTES = 10;
     private static final int DEFAULT_DAILY_LIMIT = 100000;

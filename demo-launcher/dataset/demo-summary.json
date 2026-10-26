@@ -4,11 +4,11 @@
   "generatedAt": "2026-10-26T10:48:00+08:00",
   "profiles": {
     "student": {
-      "username": "demo_student",
+      "username": "示例信息",
       "password": "Demo@123456",
       "role": "USER",
       "dailyTokenLimit": 100000,
-      "description": "预置标准演示学生账户，包含 9 项日程、向量切片、复习路径与可视化仿真"
+      "description": "默认演示账户，包含 9 项日程、向量切片、复习路径与可视化仿真"
     },
     "admin": {
       "username": "admin",

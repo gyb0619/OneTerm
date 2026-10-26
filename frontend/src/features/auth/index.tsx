@@ -22,10 +22,9 @@ export const AuthPage: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser, setCurrentUser } = useAppStore();
 
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('示例信息');
+  const [password, setPassword] = useState('Demo@123456');
   const [loadingLogin, setLoadingLogin] = useState(false);
-  const [loadingDemo, setLoadingDemo] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -93,29 +92,6 @@ export const AuthPage: React.FC = () => {
     }
   };
 
-  const handleDemoLoad = async () => {
-    setErrorMsg(null);
-    setErrorCode(null);
-    setSuccessMsg(null);
-    setLoadingDemo(true);
-    try {
-      const profile = await httpClient.post<UserProfileResponse>('/api/auth/demo-load');
-      setCurrentUser(profile);
-      setSuccessMsg('示例数据加载完成！正在前往学期日历...');
-      setTimeout(() => {
-        navigate('/calendar');
-      }, 350);
-    } catch (err) {
-      if (err instanceof ApiClientError) {
-        setErrorCode(err.code);
-        setErrorMsg(err.message);
-      } else {
-        setErrorMsg('示例数据载入异常，请刷新后重试');
-      }
-    } finally {
-      setLoadingDemo(false);
-    }
-  };
 
   const handleLogout = async () => {
     try {
@@ -161,38 +137,7 @@ export const AuthPage: React.FC = () => {
           </p>
         </div>
 
-        {/* 评委/体验免配置直接体验通道 */}
-        <div className="bg-teal-50/70 border border-teal-200/70 rounded-xl p-4 text-center space-y-2.5">
-          <div className="text-xs font-semibold text-teal-900 flex items-center justify-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-            快速验收通道（免配置直接体验）
-          </div>
-          <p className="text-[11px] text-teal-700/90 leading-relaxed">
-            一键载入标准示例（课表、考试、冲突预警、RAG 切片与可视化考点）
-          </p>
-          <button
-            type="button"
-            onClick={handleDemoLoad}
-            disabled={loadingDemo}
-            className="w-full py-2.5 px-4 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-medium text-xs shadow-sm flex items-center justify-center gap-1.5 transition disabled:opacity-60"
-          >
-            {loadingDemo ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="w-3.5 h-3.5" />
-            )}
-            {loadingDemo ? '正在初始化全套示例数据...' : '一键载入示例数据并登录'}
-          </button>
-        </div>
 
-        <div className="relative flex items-center justify-center">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-200" />
-          </div>
-          <span className="relative px-3 bg-white text-[11px] text-slate-400">
-            或使用已有账号登录
-          </span>
-        </div>
 
         {/* 错误提示 */}
         {errorMsg && (

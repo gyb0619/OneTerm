@@ -2,6 +2,7 @@
 /**
  * ==============================================================================
  * OneTerm (一学期) - 示例环境独立启动器 (BAT + JSON 驱动引擎)
+ * 直接修改 SQLite 数据库文件 (data/oneterm.db) 写入全量拟造示例信息
  * ==============================================================================
  */
 
@@ -10,6 +11,7 @@ const path = require('path');
 const http = require('http');
 const { spawn, execSync } = require('child_process');
 const readline = require('readline');
+const { DatabaseSync } = require('node:sqlite');
 
 const scriptDir = __dirname;
 const projectRoot = path.resolve(scriptDir, '..');
@@ -103,16 +105,288 @@ async function waitForPort(port, timeoutSec = 35) {
   return false;
 }
 
-// HTTP POST 请求调用 demo-load 注入全套示例数据
-function seedDemoData() {
+// 计算与后端 MockLlmGateway.embed 一致的 64 维 Float32 BLOB 向量切片
+function computeMockEmbedding(text) {
+  const EMBEDDING_DIM = 64;
+  const vec = new Float32Array(EMBEDDING_DIM);
+  if (!text || !text.trim()) {
+    vec[0] = 1.0;
+    return Buffer.from(vec.buffer);
+  }
+  const normalized = text.toLowerCase();
+  const keywords = [
+    '周三', '11-04', '有空', '算法设计与分析', '操作系统', '计算机网络',
+    '期末', '考试', '测验', '上机', '截止', '实验报告', '冒泡排序',
+    '三次握手', 'tcp', 'acm', '社团', '11-06', '11-11', '11-12', '11-13'
+  ];
+  for (let i = 0; i < keywords.length && i < EMBEDDING_DIM / 2; i++) {
+    if (normalized.includes(keywords[i])) {
+      vec[i] += 3.0;
+    }
+  }
+  if (normalized.includes('周三') || normalized.includes('11-04')) {
+    vec[0] += 4.0;
+    vec[1] += 4.0;
+  }
+  if (normalized.includes('期末') || normalized.includes('最紧') || normalized.includes('考试') || normalized.includes('截止')) {
+    vec[6] += 3.5;
+    vec[7] += 3.5;
+    vec[10] += 3.0;
+  }
+  for (let i = 0; i < normalized.length; i++) {
+    const code = normalized.charCodeAt(i);
+    const nextCode = i + 1 < normalized.length ? normalized.charCodeAt(i + 1) : 0;
+    const h = code * 31 + nextCode;
+    const bucket = (Math.abs(h) % (EMBEDDING_DIM / 2)) + (EMBEDDING_DIM / 2);
+    vec[bucket] += 1.0;
+  }
+  let norm = 0.0;
+  for (let i = 0; i < vec.length; i++) {
+    norm += vec[i] * vec[i];
+  }
+  norm = Math.sqrt(norm);
+  if (norm > 1e-8) {
+    for (let i = 0; i < vec.length; i++) {
+      vec[i] = vec[i] / norm;
+    }
+  }
+  return Buffer.from(vec.buffer);
+}
+
+// 直接修改 SQLite 数据库文件 (data/oneterm.db)，写入全套拟造示例信息
+function seedDatabaseDirectly() {
+  const dbRelPath = config.database?.dbPath || './data/oneterm.db';
+  const dbFullPath = path.resolve(projectRoot, dbRelPath);
+  const dbDir = path.dirname(dbFullPath);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+
+  log(`[DB] 正在直接写入 SQLite 数据库文件: ${dbFullPath}...`, 'cyan');
+
+  let db;
+  try {
+    db = new DatabaseSync(dbFullPath);
+    db.exec('PRAGMA busy_timeout = 5000;');
+
+    // 1. 确保表结构定义完整
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT NOT NULL UNIQUE,
+          password_hash TEXT NOT NULL,
+          role TEXT NOT NULL DEFAULT 'USER',
+          enabled INTEGER NOT NULL DEFAULT 1,
+          daily_token_limit INTEGER NOT NULL DEFAULT 100000,
+          failed_count INTEGER NOT NULL DEFAULT 0,
+          locked_until TEXT,
+          preferred_model_id INTEGER
+      );
+      CREATE TABLE IF NOT EXISTS llm_config (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          role TEXT NOT NULL,
+          name TEXT NOT NULL,
+          base_url TEXT NOT NULL,
+          model TEXT NOT NULL,
+          api_key_encrypted TEXT NOT NULL,
+          enabled INTEGER NOT NULL DEFAULT 1,
+          updated_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS usage_log (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          kind TEXT NOT NULL,
+          prompt_tokens INTEGER NOT NULL DEFAULT 0,
+          completion_tokens INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS events (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          type TEXT NOT NULL,
+          title TEXT NOT NULL,
+          start_time TEXT NOT NULL,
+          end_time TEXT NOT NULL,
+          location TEXT NOT NULL DEFAULT '',
+          course_name TEXT NOT NULL DEFAULT '',
+          source_text TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS chunks (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          text TEXT NOT NULL,
+          embedding BLOB,
+          event_id INTEGER
+      );
+      CREATE TABLE IF NOT EXISTS review_topics (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          event_id INTEGER,
+          topic TEXT NOT NULL,
+          planned_date TEXT,
+          done INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE TABLE IF NOT EXISTS visualizations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          topic_id INTEGER NOT NULL,
+          html TEXT NOT NULL,
+          prompt_version TEXT NOT NULL,
+          created_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS qa_history (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          question TEXT NOT NULL,
+          answer TEXT NOT NULL,
+          retrieval_mode TEXT NOT NULL DEFAULT 'bm25',
+          citations TEXT,
+          created_at TEXT NOT NULL
+      );
+    `);
+
+    // 2. 插入/更新 admin 管理员与默认演示用户「示例信息」
+    const adminPassHash = '$2a$10$xZWxwlrXkn8eJzfMr4aTy.Sf8SkSRGcuJqB8e.b8JxhRotEruqUqu'; // Admin@123456
+    const demoPassHash = '$2a$10$OqiKjvbe2JaQw73i6VwV.uVj3rzs3szRqqlJnqWh36/vKIa7IIIgG';  // Demo@123456
+
+    const checkAdmin = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
+    if (!checkAdmin) {
+      db.prepare(`
+        INSERT INTO users (username, password_hash, role, enabled, daily_token_limit, failed_count)
+        VALUES ('admin', ?, 'ADMIN', 1, 100000, 0)
+      `).run(adminPassHash);
+    }
+
+    const checkDemo = db.prepare('SELECT id FROM users WHERE username = ?').get('示例信息');
+    let userId;
+    if (checkDemo) {
+      userId = checkDemo.id;
+      db.prepare(`
+        UPDATE users SET password_hash = ?, enabled = 1, failed_count = 0, locked_until = NULL WHERE id = ?
+      `).run(demoPassHash, userId);
+    } else {
+      const insRes = db.prepare(`
+        INSERT INTO users (username, password_hash, role, enabled, daily_token_limit, failed_count)
+        VALUES ('示例信息', ?, 'USER', 1, 100000, 0)
+      `).run(demoPassHash);
+      userId = insRes.lastInsertRowid;
+    }
+
+    // 3. 幂等清理该用户的历史数据
+    db.prepare('DELETE FROM visualizations WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM review_topics WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM chunks WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM events WHERE user_id = ?').run(userId);
+
+    // 4. 插入 9 项全拟造标准教务事件与向量切片
+    const eventsFile = path.resolve(projectRoot, config.demo?.sampleFiles?.structuredEvents || 'demo-launcher/dataset/expected-events.json');
+    const rawEvents = JSON.parse(fs.readFileSync(eventsFile, 'utf-8'));
+
+    const insertEvent = db.prepare(`
+      INSERT INTO events (user_id, type, title, start_time, end_time, location, course_name, source_text)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const insertChunk = db.prepare(`
+      INSERT INTO chunks (user_id, text, embedding, event_id)
+      VALUES (?, ?, ?, ?)
+    `);
+
+    const insertedEvents = [];
+    for (const item of rawEvents) {
+      const res = insertEvent.run(
+        userId,
+        item.type || 'course',
+        item.title || '',
+        item.startTime || '',
+        item.endTime || '',
+        item.location || '',
+        item.courseName || '',
+        item.sourceText || ''
+      );
+      const eventId = res.lastInsertRowid;
+      insertedEvents.push({ ...item, id: eventId });
+
+      const chunkText = item.sourceText || item.title;
+      const embeddingBuf = computeMockEmbedding((item.title || '') + ' ' + (item.startTime || '') + ' ' + chunkText);
+      insertChunk.run(userId, chunkText, embeddingBuf, eventId);
+    }
+
+    // 5. 写入分科考前复习知识点 (review_topics)
+    const algExam = insertedEvents.find((e) => e.type === 'exam' && e.title.includes('算法')) || insertedEvents[0];
+    const netExam = insertedEvents.find((e) => e.type === 'exam' && e.title.includes('计算机网络')) || insertedEvents[insertedEvents.length - 1];
+    const osExam = insertedEvents.find((e) => e.type === 'exam' && e.title.includes('操作系统'));
+
+    const insertTopic = db.prepare(`
+      INSERT INTO review_topics (user_id, event_id, topic, planned_date, done)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+
+    const bubbleTopicId = insertTopic.run(userId, algExam.id, '冒泡排序', '2026-11-03', 0).lastInsertRowid;
+    const tcpTopicId = insertTopic.run(userId, netExam.id, 'TCP 三次握手', '2026-11-10', 0).lastInsertRowid;
+
+    insertTopic.run(userId, algExam.id, '分治策略与归并/快排复杂度分析', '2026-11-02', 1);
+    insertTopic.run(userId, algExam.id, '动态规划与0-1背包状态转移', '2026-11-03', 0);
+    insertTopic.run(userId, algExam.id, '贪心算法核心证明与Dijkstra最短路径', '2026-11-04', 0);
+    insertTopic.run(userId, netExam.id, 'OSI七层参考模型与TCP/IP体系结构', '2026-11-09', 0);
+    insertTopic.run(userId, netExam.id, 'TCP滑动窗口协议与流量/拥塞控制', '2026-11-11', 0);
+    insertTopic.run(userId, netExam.id, 'DNS域名解析与HTTPS对称加密握手', '2026-11-12', 0);
+    if (osExam) {
+      insertTopic.run(userId, osExam.id, '虚拟内存管理与LRU页面置换算法', '2026-11-05', 0);
+      insertTopic.run(userId, osExam.id, '死锁产生的四个必要条件与银行家算法', '2026-11-06', 0);
+    }
+
+    // 6. 写入交互式可视化仿真 (visualizations)
+    const bubbleHtmlPath = path.resolve(projectRoot, 'demo-launcher/dataset/bubble-sort.html');
+    const tcpHtmlPath = path.resolve(projectRoot, 'demo-launcher/dataset/tcp-handshake.html');
+
+    const bubbleHtml = fs.existsSync(bubbleHtmlPath) ? fs.readFileSync(bubbleHtmlPath, 'utf-8') : '<!-- bubble sort -->';
+    const tcpHtml = fs.existsSync(tcpHtmlPath) ? fs.readFileSync(tcpHtmlPath, 'utf-8') : '<!-- tcp handshake -->';
+    const nowIso = new Date().toISOString();
+
+    const insertVis = db.prepare(`
+      INSERT INTO visualizations (user_id, topic_id, html, prompt_version, created_at)
+      VALUES (?, ?, ?, 'v1.0', ?)
+    `);
+    insertVis.run(userId, bubbleTopicId, bubbleHtml, nowIso);
+    insertVis.run(userId, tcpTopicId, tcpHtml, nowIso);
+
+    log(`[成功] 已直接向 SQLite 数据库 (${dbRelPath}) 写入全量拟造示例信息！`, 'green');
+    log(`  默认用户名字段: 示例信息 (ID: ${userId})`, 'white');
+    log(`  日程事件: ${insertedEvents.length} 条已入库`, 'white');
+    log(`  向量切片: ${insertedEvents.length} 条 64-dim float32 BLOB 向量就绪`, 'white');
+    log(`  复习考点: 10 项学科考点细点大纲已建档`, 'white');
+    log(`  交互可视化: 冒泡排序与 TCP 三次握手仿真沙箱已预置`, 'white');
+
+    // 双向同步确保 Maven 子模块模式与根目录模式使用完全一致的数据库文件
+    const backendDbDir = path.resolve(projectRoot, 'backend/data');
+    if (fs.existsSync(backendDbDir)) {
+      try {
+        // 清理旧 wal/shm 确保直接载入干净的主 db 文件
+        const walFile = path.join(backendDbDir, 'oneterm.db-wal');
+        const shmFile = path.join(backendDbDir, 'oneterm.db-shm');
+        if (fs.existsSync(walFile)) fs.unlinkSync(walFile);
+        if (fs.existsSync(shmFile)) fs.unlinkSync(shmFile);
+        fs.copyFileSync(dbFullPath, path.join(backendDbDir, 'oneterm.db'));
+      } catch {}
+    }
+    return true;
+  } catch (err) {
+    log(`[错误] 直接写入 SQLite 数据库失败: ${err.message}`, 'red');
+    return false;
+  } finally {
+    if (db) {
+      try { db.close(); } catch {}
+    }
+  }
+}
+
+// HTTP POST 请求通知后端 demo-load (可选，用于同步在线状态)
+function notifyBackendDemoLoad() {
   return new Promise((resolve) => {
     const backendPort = config.server.port;
     if (!isPortInUse(backendPort)) {
-      log(`[错误] 后端服务未在端口 ${backendPort} 运行，无法注入示例数据！`, 'red');
       return resolve(false);
     }
-
-    log(`正在向 http://localhost:${backendPort}/api/auth/demo-load 发送数据注入请求...`, 'cyan');
     const req = http.request(
       {
         hostname: 'localhost',
@@ -123,30 +397,13 @@ function seedDemoData() {
           'Content-Type': 'application/json',
           'Content-Length': 2,
         },
-        timeout: 10000,
+        timeout: 5000,
       },
       (res) => {
-        let body = '';
-        res.on('data', (chunk) => (body += chunk));
-        res.on('end', () => {
-          try {
-            const data = JSON.parse(body);
-            log(`[成功] 全量示例数据注入完成！`, 'green');
-            log(`  已载入账号: ${data.username} (角色: ${data.role}, 每日Token限额: ${data.dailyTokenLimit})`, 'gray');
-            resolve(true);
-          } catch {
-            log(`[成功] 示例数据初始化完毕 (响应码: ${res.statusCode})`, 'green');
-            resolve(true);
-          }
-        });
+        resolve(true);
       }
     );
-
-    req.on('error', (err) => {
-      log(`[提示] 示例数据初始化提示: ${err.message}`, 'yellow');
-      resolve(false);
-    });
-
+    req.on('error', () => resolve(false));
     req.write('{}');
     req.end();
   });
@@ -168,15 +425,20 @@ async function startServices() {
   log('             正在启动 OneTerm (一学期) 演示环境...', 'cyan');
   log('=======================================================================', 'cyan');
 
+  // 1.1 直接修改 SQLite 数据库文件写入全量拟造示例信息
+  log(`[1/4] 直接修改 SQLite 数据库 (${config.database?.dbPath || './data/oneterm.db'}) 写入拟造示例数据...`, 'green');
+  seedDatabaseDirectly();
+
   const backendPort = config.server.port;
   const frontendPort = config.frontend.port;
   const mvnCmd = getMavenCommand();
 
-  // 1.1 检查并启动后端
+  // 1.2 检查并启动后端
   if (isPortInUse(backendPort)) {
     log(`[提示] 后端服务已在端口 ${backendPort} 正常监听。`, 'yellow');
+    await notifyBackendDemoLoad();
   } else {
-    log(`[1/4] 启动 Spring Boot 后端整合服务 (端口 ${backendPort})...`, 'green');
+    log(`[2/4] 启动 Spring Boot 后端整合服务 (端口 ${backendPort})...`, 'green');
     const logsDir = path.join(projectRoot, 'logs');
     if (!fs.existsSync(logsDir)) {
       fs.mkdirSync(logsDir, { recursive: true });
@@ -194,12 +456,12 @@ async function startServices() {
     await waitForPort(backendPort, 35);
   }
 
-  // 1.2 检查并启动前端 Vite 调试服务
+  // 1.3 检查并启动前端 Vite 调试服务
   if (config.frontend.autoStartDevServer) {
     if (isPortInUse(frontendPort)) {
       log(`[提示] 前端调试服务已在端口 ${frontendPort} 正常监听。`, 'yellow');
     } else {
-      log(`[2/4] 启动前端 Vite 调试服务 (端口 ${frontendPort})...`, 'green');
+      log(`[3/4] 启动前端 Vite 调试服务 (端口 ${frontendPort})...`, 'green');
       const feProc = spawn('npm', ['--prefix', 'frontend', 'run', 'dev'], {
         cwd: projectRoot,
         stdio: 'ignore',
@@ -209,13 +471,6 @@ async function startServices() {
       feProc.unref();
       await waitForPort(frontendPort, 15);
     }
-  }
-
-  // 1.3 自动载入全套示例数据
-  if (config.demo.autoLoadOnStart) {
-    log(`[3/4] 自动装载演示学生与 9 项标准日程/考前复习数据...`, 'green');
-    await new Promise((r) => setTimeout(r, 1200));
-    await seedDemoData();
   }
 
   // 1.4 打开浏览器
@@ -231,7 +486,7 @@ async function startServices() {
   log(`  前端调试服务 (Vite):     ${config.frontend.devUrl}`, 'white');
   log(`  Swagger 离线接口文档:   ${config.server.swaggerUrl}`, 'white');
   log('');
-  log(`  演示学生账号:  ${config.demo.accounts.demoStudent.username} / ${config.demo.accounts.demoStudent.password}`, 'yellow');
+  log(`  默认用户账号:  ${config.demo.accounts.demoStudent.username} / ${config.demo.accounts.demoStudent.password}`, 'yellow');
   log(`  系统管理账号:  ${config.demo.accounts.admin.username} / ${config.demo.accounts.admin.password}`, 'yellow');
   log('=======================================================================\n', 'green');
 }
@@ -268,10 +523,10 @@ function showSampleInfo() {
   const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf-8'));
 
   log('\n=======================================================================', 'cyan');
-  log('             OneTerm 全套示例数据集信息汇总', 'cyan');
+  log('             OneTerm 全套拟造示例数据集信息汇总', 'cyan');
   log('=======================================================================', 'cyan');
-  log('【1. 演示账户信息】', 'yellow');
-  log(`  学生账号: ${summary.profiles.student.username} / ${summary.profiles.student.password}`);
+  log('【1. 账户信息】', 'yellow');
+  log(`  演示账号: ${summary.profiles.student.username} / ${summary.profiles.student.password}`);
   log(`  管理员号: ${summary.profiles.admin.username} / ${summary.profiles.admin.password}`);
   log('');
   log('【2. 预置骨干课程与考试】', 'yellow');
@@ -324,9 +579,9 @@ function showMenu() {
   log('        OneTerm (一学期) - 示例环境独立启动器 (Demo Launcher)', 'cyan');
   log('                     BAT + JSON 驱动模式', 'cyan');
   log('=======================================================================', 'cyan');
-  log('  [1] 一键快速启动（后端+前端+自动装载全套示例数据+自动打开浏览器）', 'green');
+  log('  [1] 一键快速启动（直接修改DB写入示例+启动后端/前端+打开浏览器）', 'green');
   log('  [2] 检查服务运行状态 (Status)', 'white');
-  log('  [3] 重新注入/重置全套示例数据 (Demo Seed)', 'white');
+  log('  [3] 直接向 SQLite 数据库写入/重置拟造示例信息 (Direct DB Seed)', 'white');
   log('  [4] 查看预置示例数据与账号大纲 (Sample Info)', 'white');
   log('  [5] 运行全量单元测试与工程校验 (Maven Test)', 'white');
   log('  [6] 停止所有正在运行的服务 (Stop)', 'yellow');
@@ -349,7 +604,8 @@ function showMenu() {
         showStatus();
         break;
       case '3':
-        await seedDemoData();
+        seedDatabaseDirectly();
+        await notifyBackendDemoLoad();
         break;
       case '4':
         showSampleInfo();
@@ -389,7 +645,8 @@ const action = (process.argv[2] || 'menu').toLowerCase();
       showStatus();
       break;
     case 'seed':
-      await seedDemoData();
+      seedDatabaseDirectly();
+      await notifyBackendDemoLoad();
       break;
     case 'samples':
       showSampleInfo();
