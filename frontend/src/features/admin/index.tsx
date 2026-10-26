@@ -806,8 +806,9 @@ export const AdminPage: React.FC = () => {
 
       {/* 弹窗：新增/编辑模型配置 */}
       {isConfigModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-xs animate-fade-in overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden flex flex-col max-h-[88vh] animate-scale-in">
+        <div className="fixed inset-0 z-50 overflow-y-auto p-4 sm:p-6 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center animate-fade-in">
+          <div className="relative w-full max-w-lg my-auto bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh] animate-scale-in">
+            {/* 固定头部 */}
             <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/90 shrink-0">
               <h3 className="text-sm font-bold text-slate-900">
                 {editingConfigId !== null
@@ -825,87 +826,92 @@ export const AdminPage: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSaveConfig} className="p-5 space-y-3.5 text-xs overflow-y-auto flex-1">
-              <div>
-                <label className="block text-slate-700 font-medium mb-1">模型角色</label>
-                <select
-                  value={cfgRole}
-                  onChange={(e) => setCfgRole(e.target.value as LlmRole)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
-                >
-                  <option value="chat">chat — 对话 / 事件抽取 / 可视化</option>
-                  <option value="vision">vision — 课表与通知图片 OCR</option>
-                  <option value="embedding">embedding — 原文切片向量化</option>
-                </select>
-              </div>
+            {/* 表单容器：撑满剩余高度并隐藏溢出 */}
+            <form onSubmit={handleSaveConfig} className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              {/* 可滚动字段区域 */}
+              <div className="p-5 space-y-3.5 text-xs overflow-y-auto flex-1 min-h-0">
+                <div>
+                  <label className="block text-slate-700 font-medium mb-1">模型角色</label>
+                  <select
+                    value={cfgRole}
+                    onChange={(e) => setCfgRole(e.target.value as LlmRole)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  >
+                    <option value="chat">chat — 对话 / 事件抽取 / 可视化</option>
+                    <option value="vision">vision — 课表与通知图片 OCR</option>
+                    <option value="embedding">embedding — 原文切片向量化</option>
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-slate-700 font-medium mb-1">显示名称</label>
-                <input
-                  type="text"
-                  required
-                  value={cfgName}
-                  onChange={(e) => setCfgName(e.target.value)}
-                  placeholder="例如：DeepSeek 生产节点"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500"
-                />
-              </div>
+                <div>
+                  <label className="block text-slate-700 font-medium mb-1">显示名称</label>
+                  <input
+                    type="text"
+                    required
+                    value={cfgName}
+                    onChange={(e) => setCfgName(e.target.value)}
+                    placeholder="例如：DeepSeek 生产节点"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-slate-700 font-medium mb-1">接口地址 (Base URL)</label>
-                <input
-                  type="text"
-                  required
-                  value={cfgBaseUrl}
-                  onChange={(e) => setCfgBaseUrl(e.target.value)}
-                  placeholder="https://api.deepseek.com"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono focus:outline-none focus:ring-1 focus:ring-teal-500"
-                />
-              </div>
+                <div>
+                  <label className="block text-slate-700 font-medium mb-1">接口地址 (Base URL)</label>
+                  <input
+                    type="text"
+                    required
+                    value={cfgBaseUrl}
+                    onChange={(e) => setCfgBaseUrl(e.target.value)}
+                    placeholder="https://api.deepseek.com"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-slate-700 font-medium mb-1">模型标识 (Model)</label>
-                <input
-                  type="text"
-                  required
-                  value={cfgModel}
-                  onChange={(e) => setCfgModel(e.target.value)}
-                  placeholder="deepseek-chat"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono focus:outline-none focus:ring-1 focus:ring-teal-500"
-                />
-              </div>
+                <div>
+                  <label className="block text-slate-700 font-medium mb-1">模型标识 (Model)</label>
+                  <input
+                    type="text"
+                    required
+                    value={cfgModel}
+                    onChange={(e) => setCfgModel(e.target.value)}
+                    placeholder="deepseek-chat"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-slate-700 font-medium mb-1">
-                  API Key（AES-256 加密存储）
+                <div>
+                  <label className="block text-slate-700 font-medium mb-1">
+                    API Key（AES-256 加密存储）
+                  </label>
+                  <input
+                    type="password"
+                    required={editingConfigId === null}
+                    value={cfgApiKey}
+                    onChange={(e) => setCfgApiKey(e.target.value)}
+                    placeholder={
+                      editingConfigId !== null
+                        ? editingConfigId < 0
+                          ? '留空保留环境变量原生密钥，输入新Key则覆盖'
+                          : '留空保留现有密钥'
+                        : 'sk-xxxxxxxxxxxxxxxx'
+                    }
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  />
+                </div>
+
+                <label className="flex items-center gap-2 cursor-pointer pt-1">
+                  <input
+                    type="checkbox"
+                    checked={cfgEnabled}
+                    onChange={(e) => setCfgEnabled(e.target.checked)}
+                    className="rounded text-teal-600 focus:ring-teal-500"
+                  />
+                  <span className="text-slate-700 font-medium">启用该模型配置</span>
                 </label>
-                <input
-                  type="password"
-                  required={editingConfigId === null}
-                  value={cfgApiKey}
-                  onChange={(e) => setCfgApiKey(e.target.value)}
-                  placeholder={
-                    editingConfigId !== null
-                      ? editingConfigId < 0
-                        ? '留空保留环境变量原生密钥，输入新Key则覆盖'
-                        : '留空保留现有密钥'
-                      : 'sk-xxxxxxxxxxxxxxxx'
-                  }
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono focus:outline-none focus:ring-1 focus:ring-teal-500"
-                />
               </div>
 
-              <label className="flex items-center gap-2 cursor-pointer pt-1">
-                <input
-                  type="checkbox"
-                  checked={cfgEnabled}
-                  onChange={(e) => setCfgEnabled(e.target.checked)}
-                  className="rounded text-teal-600 focus:ring-teal-500"
-                />
-                <span className="text-slate-700 font-medium">启用该模型配置</span>
-              </label>
-
-              <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs pt-3 pb-1 border-t border-slate-100 flex justify-end gap-2">
+              {/* 固定底部操作栏 */}
+              <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/90 flex items-center justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsConfigModalOpen(false)}
@@ -915,7 +921,7 @@ export const AdminPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="btn-primary bg-teal-600 hover:bg-teal-700 py-1.5 px-4 text-xs"
+                  className="btn-primary bg-teal-600 hover:bg-teal-700 py-1.5 px-4 text-xs font-medium"
                 >
                   保存配置
                 </button>
@@ -927,8 +933,9 @@ export const AdminPage: React.FC = () => {
 
       {/* 弹窗：创建新账号 */}
       {isUserModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-xs animate-fade-in overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full border border-slate-200 overflow-hidden flex flex-col max-h-[88vh] animate-scale-in">
+        <div className="fixed inset-0 z-50 overflow-y-auto p-4 sm:p-6 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center animate-fade-in">
+          <div className="relative w-full max-w-sm my-auto bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh] animate-scale-in">
+            {/* 固定头部 */}
             <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/90 shrink-0">
               <h3 className="text-sm font-bold text-slate-900">创建新账号</h3>
               <button
@@ -940,57 +947,62 @@ export const AdminPage: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleCreateUser} className="p-5 space-y-3.5 text-xs overflow-y-auto flex-1">
-              <div>
-                <label className="block text-slate-700 font-medium mb-1">用户名</label>
-                <input
-                  type="text"
-                  required
-                  value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value)}
-                  placeholder="例如：judge_02"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500"
-                />
+            {/* 表单容器 */}
+            <form onSubmit={handleCreateUser} className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              {/* 可滚动字段区域 */}
+              <div className="p-5 space-y-3.5 text-xs overflow-y-auto flex-1 min-h-0">
+                <div>
+                  <label className="block text-slate-700 font-medium mb-1">用户名</label>
+                  <input
+                    type="text"
+                    required
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    placeholder="例如：judge_02"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-medium mb-1">密码（至少6位）</label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="至少 6 位字符"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-medium mb-1">角色</label>
+                  <select
+                    value={newRole}
+                    onChange={(e) => setNewRole(e.target.value as 'USER' | 'ADMIN')}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  >
+                    <option value="USER">USER — 学生 / 评委</option>
+                    <option value="ADMIN">ADMIN — 系统管理员</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-medium mb-1">每日 Token 额度上限</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1000}
+                    value={newDailyLimit}
+                    onChange={(e) => setNewDailyLimit(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-slate-700 font-medium mb-1">密码（至少6位）</label>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="至少 6 位字符"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-medium mb-1">角色</label>
-                <select
-                  value={newRole}
-                  onChange={(e) => setNewRole(e.target.value as 'USER' | 'ADMIN')}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
-                >
-                  <option value="USER">USER — 学生 / 评委</option>
-                  <option value="ADMIN">ADMIN — 系统管理员</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-medium mb-1">每日 Token 额度上限</label>
-                <input
-                  type="number"
-                  min={0}
-                  step={1000}
-                  value={newDailyLimit}
-                  onChange={(e) => setNewDailyLimit(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono focus:outline-none focus:ring-1 focus:ring-teal-500"
-                />
-              </div>
-
-              <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs pt-3 pb-1 border-t border-slate-100 flex justify-end gap-2">
+              {/* 固定底部操作栏 */}
+              <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/90 flex items-center justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsUserModalOpen(false)}
@@ -1000,7 +1012,7 @@ export const AdminPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="btn-primary bg-teal-600 hover:bg-teal-700 py-1.5 px-4 text-xs"
+                  className="btn-primary bg-teal-600 hover:bg-teal-700 py-1.5 px-4 text-xs font-medium"
                 >
                   创建账号
                 </button>
@@ -1012,8 +1024,8 @@ export const AdminPage: React.FC = () => {
 
       {/* 弹窗：调整每日额度 */}
       {editingQuotaUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full border border-slate-200 p-5 space-y-4 text-xs">
+        <div className="fixed inset-0 z-50 overflow-y-auto p-4 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center animate-fade-in">
+          <div className="relative w-full max-w-sm my-auto bg-white rounded-2xl shadow-xl border border-slate-200 p-5 space-y-4 text-xs animate-scale-in">
             <h3 className="text-sm font-bold text-slate-900">
               调整 {editingQuotaUser.username} 的每日 Token 额度
             </h3>
@@ -1052,8 +1064,8 @@ export const AdminPage: React.FC = () => {
 
       {/* 弹窗：重置密码 */}
       {resetTargetUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full border border-slate-200 p-5 space-y-4 text-xs">
+        <div className="fixed inset-0 z-50 overflow-y-auto p-4 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center animate-fade-in">
+          <div className="relative w-full max-w-sm my-auto bg-white rounded-2xl shadow-xl border border-slate-200 p-5 space-y-4 text-xs animate-scale-in">
             <h3 className="text-sm font-bold text-slate-900">
               重置 {resetTargetUser.username} 的密码并解除锁定
             </h3>
