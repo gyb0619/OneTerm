@@ -80,31 +80,64 @@ export const SemesterWorkloadCharts: React.FC<SemesterWorkloadChartsProps> = ({
     if (!el || weeklyDensity.length === 0) return;
 
     const chart = echarts.init(el);
-    const weekLabels = weeklyDensity.map(
-      (w, idx) => `第${idx + 1}周\n(${w.weekStart.slice(5)}~${w.weekEnd.slice(5)})`
-    );
+    const weekLabels = weeklyDensity.map((_, idx) => `第${idx + 1}周`);
 
     const option: echarts.EChartsOption = {
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
+        backgroundColor: 'rgba(255, 255, 255, 0.98)',
+        borderColor: '#cbd5e1',
+        borderWidth: 1,
+        padding: [10, 14],
+        textStyle: { color: '#0f172a', fontSize: 12 },
+        extraCssText: 'box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1); border-radius: 12px; z-index: 50;',
+        formatter: (params: unknown) => {
+          if (!Array.isArray(params) || params.length === 0) return '';
+          const dataIndex = params[0].dataIndex as number;
+          const item = weeklyDensity[dataIndex];
+          if (!item) return '';
+          let html = `<div style="font-weight:700;margin-bottom:6px;font-size:13px;color:#0f172a;">第 ${dataIndex + 1} 周 (${item.weekStart} ~ ${item.weekEnd})</div>`;
+          html += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:6px;font-weight:700;color:#0f766e;"><span>周总负载分数</span><span>${item.totalScore} 分</span></div>`;
+          html += `<div style="border-top:1px dashed #e2e8f0;margin:6px 0;"></div>`;
+          params.forEach((p: { seriesName: string; color: string; value: number }) => {
+            if (p.seriesName !== '周负载总分') {
+              html += `<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;font-size:12px;margin:3px 0;">
+                <span style="display:flex;align-items:center;gap:6px;">
+                  <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${p.color};"></span>
+                  <span style="color:#64748b;">${p.seriesName}</span>
+                </span>
+                <span style="font-weight:600;color:#1e293b;">${p.value} 个</span>
+              </div>`;
+            }
+          });
+          return html;
+        },
       },
       legend: {
-        top: 0,
-        textStyle: { fontSize: 11, color: '#475569' },
+        top: 4,
+        right: 12,
+        itemGap: 14,
+        textStyle: { fontSize: 12, color: '#475569' },
+        icon: 'roundRect',
         data: ['考试(5分)', '作业截止(3分)', '课程(2分)', '活动(1分)', '周负载总分'],
       },
       grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '6%',
-        top: 38,
+        left: 35,
+        right: 35,
+        bottom: 35,
+        top: 48,
         containLabel: true,
       },
       xAxis: {
         type: 'category',
         data: weekLabels,
-        axisLabel: { color: '#475569', fontSize: 11 },
+        axisLabel: {
+          color: '#475569',
+          fontSize: 11,
+          interval: weeklyDensity.length > 18 ? 'auto' : 0,
+        },
+        axisTick: { alignWithLabel: true },
         axisLine: { lineStyle: { color: '#cbd5e1' } },
       },
       yAxis: [
@@ -112,6 +145,7 @@ export const SemesterWorkloadCharts: React.FC<SemesterWorkloadChartsProps> = ({
           type: 'value',
           name: '事件数量',
           minInterval: 1,
+          nameTextStyle: { color: '#64748b', fontSize: 11 },
           axisLabel: { color: '#64748b', fontSize: 11 },
           splitLine: { lineStyle: { color: '#f1f5f9' } },
         },
@@ -119,6 +153,7 @@ export const SemesterWorkloadCharts: React.FC<SemesterWorkloadChartsProps> = ({
           type: 'value',
           name: '负载总分',
           minInterval: 1,
+          nameTextStyle: { color: '#0f766e', fontSize: 11 },
           axisLabel: { color: '#0f766e', fontSize: 11 },
           splitLine: { show: false },
         },
@@ -128,15 +163,15 @@ export const SemesterWorkloadCharts: React.FC<SemesterWorkloadChartsProps> = ({
           name: '考试(5分)',
           type: 'bar',
           stack: 'events',
-          barMaxWidth: 28,
-          itemStyle: { color: '#ef4444', borderRadius: [0, 0, 0, 0] },
+          barMaxWidth: 26,
+          itemStyle: { color: '#ef4444' },
           data: weeklyDensity.map((w) => w.examCount),
         },
         {
           name: '作业截止(3分)',
           type: 'bar',
           stack: 'events',
-          barMaxWidth: 28,
+          barMaxWidth: 26,
           itemStyle: { color: '#f59e0b' },
           data: weeklyDensity.map((w) => w.deadlineCount),
         },
@@ -144,7 +179,7 @@ export const SemesterWorkloadCharts: React.FC<SemesterWorkloadChartsProps> = ({
           name: '课程(2分)',
           type: 'bar',
           stack: 'events',
-          barMaxWidth: 28,
+          barMaxWidth: 26,
           itemStyle: { color: '#0d9488' },
           data: weeklyDensity.map((w) => w.courseCount),
         },
@@ -152,7 +187,7 @@ export const SemesterWorkloadCharts: React.FC<SemesterWorkloadChartsProps> = ({
           name: '活动(1分)',
           type: 'bar',
           stack: 'events',
-          barMaxWidth: 28,
+          barMaxWidth: 26,
           itemStyle: { color: '#0284c7', borderRadius: [4, 4, 0, 0] },
           data: weeklyDensity.map((w) => w.activityCount),
         },
@@ -179,8 +214,20 @@ export const SemesterWorkloadCharts: React.FC<SemesterWorkloadChartsProps> = ({
 
     const handleResize = () => chart.resize();
     window.addEventListener('resize', handleResize);
+
+    const resizeObserver = new ResizeObserver(() => {
+      chart.resize();
+    });
+    resizeObserver.observe(el);
+
+    const t1 = window.setTimeout(handleResize, 100);
+    const t2 = window.setTimeout(handleResize, 350);
+
     return () => {
       window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
       chart.dispose();
     };
   }, [weeklyDensity]);
@@ -264,111 +311,113 @@ export const SemesterWorkloadCharts: React.FC<SemesterWorkloadChartsProps> = ({
         </button>
       </div>
 
-      {/* 热力图与 ECharts 周密度图双栏 */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* 学期每日负载热力图 */}
-        <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-4 lg:col-span-7 flex flex-col justify-between">
+      {/* 1. ECharts 每周任务密度趋势图（全宽独立卡片，充足横向空间彻底消除数据堆叠） */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 sm:p-5 flex flex-col space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center shrink-0">
+              <BarChart3 className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900">每周任务密度与分类</h3>
+              <p className="text-xs text-slate-500">
+                学期各周次考试、作业、课程、活动负荷堆叠与总分变化趋势
+              </p>
+            </div>
+          </div>
+          {busiestWeek && (
+            <span className="text-xs px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-medium self-start sm:self-auto">
+              峰值周：第 {weeklyDensity.findIndex((w) => w.weekStart === busiestWeek.weekStart) + 1} 周 ({busiestWeek.weekStart.slice(5)} 周，{busiestWeek.totalScore} 分)
+            </span>
+          )}
+        </div>
+        <div ref={chartContainerRef} className="w-full h-80 min-h-[320px]" />
+      </div>
+
+      {/* 2. 学期每日负载热力分布（全宽独立卡片，大格位平铺呈现日期与日程项） */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 sm:p-5 space-y-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
           <div>
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">学期每日负载热力分布</h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  考试(5) · 作业(3) · 课程(2) · 活动(1)，点击任意日期跳转周历
-                </p>
-              </div>
+            <h3 className="text-sm sm:text-base font-bold text-slate-900">学期每日负载热力分布</h3>
+            <p className="text-xs text-slate-500">
+              考试(5分) · 作业(3分) · 课程(2分) · 活动(1分)，点击任意日期跳转至对应周历
+            </p>
+          </div>
 
-              {/* 单色渐变色阶图例 */}
-              <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                <span>轻松</span>
-                {[0, 2, 4, 7, 10].map((sampleScore) => {
-                  const style = getHeatmapColorStyle(sampleScore);
-                  return (
-                    <span
-                      key={sampleScore}
-                      className="w-4 h-4 rounded border"
-                      style={{ backgroundColor: style.bg, borderColor: style.border }}
-                      title={style.levelLabel}
-                    />
-                  );
-                })}
-                <span>繁忙</span>
-              </div>
-            </div>
-
-            {/* 按周分组展示 7 列网格 */}
-            <div className="grid grid-cols-7 gap-1.5 text-center text-[11px] font-semibold text-slate-500 mb-1.5">
-              <span>周一</span>
-              <span>周二</span>
-              <span>周三</span>
-              <span>周四</span>
-              <span>周五</span>
-              <span>周六</span>
-              <span>周日</span>
-            </div>
-
-            <div className="grid grid-cols-7 gap-1.5">
-              {dailyHeatmap.map((item) => {
-                const style = getHeatmapColorStyle(item.score);
-                const isFreest = freestDay?.date === item.date;
-                const isBusiest = busiestDay?.date === item.date && item.score > 0;
-
-                return (
-                  <button
-                    key={item.date}
-                    type="button"
-                    onClick={() => onJumpToWeek(getMondayOfDate(item.date))}
-                    style={{
-                      backgroundColor: style.bg,
-                      color: style.text,
-                      borderColor: style.border,
-                    }}
-                    className={`relative rounded-lg border p-2 text-left transition-transform hover:scale-[1.03] ${
-                      isBusiest
-                        ? 'ring-2 ring-red-500'
-                        : isFreest
-                          ? 'ring-2 ring-teal-500'
-                          : ''
-                    }`}
-                    title={`${item.date}：负载 ${item.score} 分（${item.eventCount} 项）`}
-                  >
-                    <div className="flex items-center justify-between gap-1">
-                      <span className="text-[11px] font-mono font-bold">
-                        {item.date.slice(5)}
-                      </span>
-                      {isBusiest && (
-                        <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-red-600 text-white">
-                          最忙
-                        </span>
-                      )}
-                      {!isBusiest && isFreest && (
-                        <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-teal-700 text-white">
-                          最空
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-1 text-xs font-extrabold">{item.score} 分</div>
-                    <div className="text-[10px] opacity-80">{item.eventCount} 项日程</div>
-                  </button>
-                );
-              })}
-            </div>
+          {/* 单色渐变色阶图例 */}
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 self-start sm:self-auto">
+            <span>轻松</span>
+            {[0, 2, 4, 7, 10].map((sampleScore) => {
+              const style = getHeatmapColorStyle(sampleScore);
+              return (
+                <span
+                  key={sampleScore}
+                  className="w-4 h-4 rounded border"
+                  style={{ backgroundColor: style.bg, borderColor: style.border }}
+                  title={style.levelLabel}
+                />
+              );
+            })}
+            <span>繁忙</span>
           </div>
         </div>
 
-        {/* ECharts 每周任务密度趋势图 */}
-        <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-4 lg:col-span-5 flex flex-col">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1.5">
-              <BarChart3 className="w-4 h-4 text-teal-600" />
-              <h3 className="text-sm font-bold text-slate-900">每周任务密度与分类</h3>
-            </div>
-            {busiestWeek && (
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-medium">
-                峰值：{busiestWeek.weekStart.slice(5)} 周 ({busiestWeek.totalScore}分)
-              </span>
-            )}
-          </div>
-          <div ref={chartContainerRef} className="w-full h-64 flex-1 min-h-[240px]" />
+        {/* 按周分组展示 7 列网格 */}
+        <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-slate-600 mb-1">
+          <span>周一</span>
+          <span>周二</span>
+          <span>周三</span>
+          <span>周四</span>
+          <span>周五</span>
+          <span>周六</span>
+          <span>周日</span>
+        </div>
+
+        <div className="grid grid-cols-7 gap-2">
+          {dailyHeatmap.map((item) => {
+            const style = getHeatmapColorStyle(item.score);
+            const isFreest = freestDay?.date === item.date;
+            const isBusiest = busiestDay?.date === item.date && item.score > 0;
+
+            return (
+              <button
+                key={item.date}
+                type="button"
+                onClick={() => onJumpToWeek(getMondayOfDate(item.date))}
+                style={{
+                  backgroundColor: style.bg,
+                  color: style.text,
+                  borderColor: style.border,
+                }}
+                className={`relative rounded-xl border p-2.5 text-left transition-all duration-150 hover:scale-[1.03] active:scale-95 shadow-2xs ${
+                  isBusiest
+                    ? 'ring-2 ring-red-500 font-bold'
+                    : isFreest
+                      ? 'ring-2 ring-teal-500 font-bold'
+                      : ''
+                }`}
+                title={`${item.date}：负载 ${item.score} 分（${item.eventCount} 项日程）`}
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-xs font-mono font-bold">
+                    {item.date.slice(5)}
+                  </span>
+                  {isBusiest && (
+                    <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-red-600 text-white">
+                      最忙
+                    </span>
+                  )}
+                  {!isBusiest && isFreest && (
+                    <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-teal-700 text-white">
+                      最空
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1 text-xs font-extrabold">{item.score} 分</div>
+                <div className="text-[11px] opacity-85 truncate">{item.eventCount} 项日程</div>
+              </button>
+            );
+          })}
         </div>
       </div>
     </section>
