@@ -806,9 +806,9 @@ export const AdminPage: React.FC = () => {
 
       {/* 弹窗：新增/编辑模型配置 */}
       {isConfigModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full border border-slate-200 overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-xs animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden flex flex-col max-h-[88vh] animate-scale-in">
+            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/90 shrink-0">
               <h3 className="text-sm font-bold text-slate-900">
                 {editingConfigId !== null
                   ? editingConfigId < 0
@@ -819,19 +819,19 @@ export const AdminPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsConfigModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveConfig} className="p-5 space-y-3.5 text-xs">
+            <form onSubmit={handleSaveConfig} className="p-5 space-y-3.5 text-xs overflow-y-auto flex-1">
               <div>
                 <label className="block text-slate-700 font-medium mb-1">模型角色</label>
                 <select
                   value={cfgRole}
                   onChange={(e) => setCfgRole(e.target.value as LlmRole)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
                 >
                   <option value="chat">chat — 对话 / 事件抽取 / 可视化</option>
                   <option value="vision">vision — 课表与通知图片 OCR</option>
@@ -847,7 +847,7 @@ export const AdminPage: React.FC = () => {
                   value={cfgName}
                   onChange={(e) => setCfgName(e.target.value)}
                   placeholder="例如：DeepSeek 生产节点"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500"
                 />
               </div>
 
@@ -859,7 +859,7 @@ export const AdminPage: React.FC = () => {
                   value={cfgBaseUrl}
                   onChange={(e) => setCfgBaseUrl(e.target.value)}
                   placeholder="https://api.deepseek.com"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono focus:outline-none focus:ring-1 focus:ring-teal-500"
                 />
               </div>
 
@@ -871,7 +871,7 @@ export const AdminPage: React.FC = () => {
                   value={cfgModel}
                   onChange={(e) => setCfgModel(e.target.value)}
                   placeholder="deepseek-chat"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono focus:outline-none focus:ring-1 focus:ring-teal-500"
                 />
               </div>
 
@@ -891,7 +891,7 @@ export const AdminPage: React.FC = () => {
                         : '留空保留现有密钥'
                       : 'sk-xxxxxxxxxxxxxxxx'
                   }
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono focus:outline-none focus:ring-1 focus:ring-teal-500"
                 />
               </div>
 
@@ -905,7 +905,7 @@ export const AdminPage: React.FC = () => {
                 <span className="text-slate-700 font-medium">启用该模型配置</span>
               </label>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs pt-3 pb-1 border-t border-slate-100 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setIsConfigModalOpen(false)}
@@ -927,20 +927,20 @@ export const AdminPage: React.FC = () => {
 
       {/* 弹窗：创建新账号 */}
       {isUserModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full border border-slate-200 overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-xs animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full border border-slate-200 overflow-hidden flex flex-col max-h-[88vh] animate-scale-in">
+            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/90 shrink-0">
               <h3 className="text-sm font-bold text-slate-900">创建新账号</h3>
               <button
                 type="button"
                 onClick={() => setIsUserModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateUser} className="p-5 space-y-3.5 text-xs">
+            <form onSubmit={handleCreateUser} className="p-5 space-y-3.5 text-xs overflow-y-auto flex-1">
               <div>
                 <label className="block text-slate-700 font-medium mb-1">用户名</label>
                 <input
@@ -949,7 +949,7 @@ export const AdminPage: React.FC = () => {
                   value={newUsername}
                   onChange={(e) => setNewUsername(e.target.value)}
                   placeholder="例如：judge_02"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500"
                 />
               </div>
 
@@ -962,7 +962,7 @@ export const AdminPage: React.FC = () => {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="至少 6 位字符"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500"
                 />
               </div>
 
@@ -971,7 +971,7 @@ export const AdminPage: React.FC = () => {
                 <select
                   value={newRole}
                   onChange={(e) => setNewRole(e.target.value as 'USER' | 'ADMIN')}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
                 >
                   <option value="USER">USER — 学生 / 评委</option>
                   <option value="ADMIN">ADMIN — 系统管理员</option>
@@ -986,11 +986,11 @@ export const AdminPage: React.FC = () => {
                   step={1000}
                   value={newDailyLimit}
                   onChange={(e) => setNewDailyLimit(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono focus:outline-none focus:ring-1 focus:ring-teal-500"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs pt-3 pb-1 border-t border-slate-100 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setIsUserModalOpen(false)}
