@@ -773,7 +773,7 @@ export const ExtractPage: React.FC = () => {
       {/* 全局操作横幅 */}
       {batchMessage && (
         <div
-          className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
+          className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs animate-fade-slide-down ${
             batchMessage.type === 'success'
               ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
               : 'bg-rose-50 border-rose-200 text-rose-900'
@@ -812,7 +812,7 @@ export const ExtractPage: React.FC = () => {
 
       {/* 待核对草稿列表（极简紧凑表格布局） */}
       {drafts.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-3.5">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-3.5 animate-fade-slide-up">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-bold text-slate-900">
@@ -873,7 +873,7 @@ export const ExtractPage: React.FC = () => {
                 {pagedDrafts.map((draft, idx) => {
                   const globalIdx = (draftPage - 1) * PAGE_SIZE + idx + 1;
                   return (
-                    <tr key={draft._localId} className="hover:bg-slate-50/70">
+                    <tr key={draft._localId} className="hover:bg-slate-50/80 transition-colors duration-150">
                       <td className="py-2 px-2.5 font-mono text-slate-400">#{globalIdx}</td>
                       <td className="py-2 px-2.5">
                         <select

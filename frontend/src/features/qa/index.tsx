@@ -463,8 +463,8 @@ export const QaPage: React.FC = () => {
       {/* 侧滑历史记录抽屉 */}
       {isHistoryOpen &&
         createPortal(
-          <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/30 backdrop-blur-xs transition-opacity animate-in fade-in">
-          <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col border-l border-slate-200">
+          <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/30 backdrop-blur-xs transition-opacity animate-fade-in">
+            <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col border-l border-slate-200 animate-slide-in-right">
             {/* 抽屉标题栏 */}
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
               <div className="flex items-center gap-2 text-slate-800">
@@ -578,17 +578,17 @@ export const QaPage: React.FC = () => {
                 </button>
               </div>
 
-              <div className="space-y-2.5">
+              <div key={suggestedPrompts.map((p) => p.text).join('')} className="space-y-2.5 animate-fade-in">
                 {suggestedPrompts.map((item, idx) => (
                   <button
                     key={`${item.category}-${idx}`}
                     type="button"
                     onClick={() => void askQuestion(item.text)}
                     disabled={streaming}
-                    className="w-full p-3.5 rounded-xl bg-slate-50/70 hover:bg-teal-50/70 border border-slate-200/90 hover:border-teal-300 text-slate-800 hover:text-teal-950 transition text-left flex items-center justify-between gap-3 group shadow-2xs cursor-pointer"
+                    className="w-full p-3.5 rounded-xl bg-slate-50/70 hover:bg-teal-50/70 border border-slate-200/90 hover:border-teal-300 text-slate-800 hover:text-teal-950 transition-all duration-150 text-left flex items-center justify-between gap-3 group shadow-2xs cursor-pointer hover:-translate-y-0.5 hover:shadow-xs active:scale-[0.99]"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="shrink-0 text-xs font-semibold px-2.5 py-0.5 rounded-lg bg-teal-50 text-teal-700 border border-teal-200/70 group-hover:bg-teal-100/80">
+                      <span className="shrink-0 text-xs font-semibold px-2.5 py-0.5 rounded-lg bg-teal-50 text-teal-700 border border-teal-200/70 group-hover:bg-teal-100/80 transition-colors">
                         {item.category}
                       </span>
                       <span className="text-sm sm:text-base font-medium truncate">{item.text}</span>
@@ -606,7 +606,7 @@ export const QaPage: React.FC = () => {
               <div key={turn.id} id={`turn-${turn.id}`} className="space-y-3.5 scroll-mt-20 animate-fade-slide-up">
                 {/* 用户提问气泡 */}
                 <div className="flex justify-end items-start gap-2.5">
-                  <div className="bg-teal-600 text-white rounded-2xl rounded-tr-xs px-4 sm:px-5 py-3 text-sm sm:text-base max-w-[85%] shadow-xs leading-relaxed">
+                  <div className="bg-teal-600 text-white rounded-2xl rounded-tr-xs px-4 sm:px-5 py-3 text-sm sm:text-base max-w-[85%] shadow-xs leading-relaxed animate-pop-in">
                     {turn.question}
                   </div>
                   <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center shrink-0 mt-0.5">
@@ -620,16 +620,23 @@ export const QaPage: React.FC = () => {
                     <Bot className="w-4 h-4" />
                   </div>
 
-                  <div className="flex-1 bg-white rounded-2xl rounded-tl-xs border border-slate-200/80 p-4 sm:p-5 shadow-xs space-y-3.5">
+                  <div className="flex-1 bg-white rounded-2xl rounded-tl-xs border border-slate-200/80 p-4 sm:p-5 shadow-xs space-y-3.5 animate-fade-in">
                     {isStreamingThis && !turn.answer && (
-                      <div className="flex items-center gap-2 text-sm text-slate-500 py-1.5">
+                      <div className="flex items-center gap-2 text-sm text-slate-500 py-1.5 animate-pulse">
                         <Loader2 className="w-4 h-4 animate-spin text-teal-600" />
                         <span>正在检索教务切片并生成回答...</span>
                       </div>
                     )}
 
                     {/* Markdown 渲染支持 */}
-                    {turn.answer && <MarkdownAnswer content={turn.answer} />}
+                    {turn.answer && (
+                      <div className="relative">
+                        <MarkdownAnswer content={turn.answer} />
+                        {isStreamingThis && (
+                          <span className="inline-block w-2 h-4 ml-1 bg-teal-600 animate-pulse rounded-xs align-middle" />
+                        )}
+                      </div>
+                    )}
 
                     {turn.status === 'error' && (
                       <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm flex items-center justify-between">

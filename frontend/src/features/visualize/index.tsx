@@ -481,7 +481,7 @@ export const VisualizePage: React.FC = () => {
                 <p className="text-xs text-slate-400">可在「学期日历 - 考前复习规划」中智能生成，或在下方输入生成</p>
               </div>
             ) : (
-              <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
+              <div key={selectedCourseFilter} className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1 animate-fade-in">
                 {filteredReviewTopics.map((rt) => {
                   const existingViz = getTopicViz(rt);
                   const isCurrentlyActive = activeViz && existingViz && activeViz.id === existingViz.id;
@@ -761,11 +761,11 @@ export const VisualizePage: React.FC = () => {
           )}
 
           {!activeViz ? (
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-16 text-center text-sm text-slate-400 shadow-xs">
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-16 text-center text-sm text-slate-400 shadow-xs animate-fade-in">
               请在左侧选择或输入考点生成交互式可视化页面
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm">
+            <div key={activeViz.id} className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm animate-scale-in">
               <div className="px-5 py-3.5 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between text-xs sm:text-sm">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span className="font-bold text-slate-900 truncate text-base">{activeViz.topic}</span>

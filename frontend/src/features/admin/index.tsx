@@ -410,7 +410,7 @@ export const AdminPage: React.FC = () => {
 
       {/* 提示信息横幅 */}
       {bannerError && (
-        <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between">
+        <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between animate-fade-slide-down">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
             <span>{bannerError}</span>
@@ -426,7 +426,7 @@ export const AdminPage: React.FC = () => {
       )}
 
       {bannerSuccess && (
-        <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between">
+        <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between animate-fade-slide-down">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>{bannerSuccess}</span>
@@ -441,9 +441,11 @@ export const AdminPage: React.FC = () => {
         </div>
       )}
 
-      {/* 标签 1：大模型网关配置 */}
-      {activeTab === 'configs' && (
-        <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-4 space-y-3">
+      {/* 标签内容容器，平滑淡入切换 */}
+      <div key={activeTab} className="animate-fade-in">
+        {/* 标签 1：大模型网关配置 */}
+        {activeTab === 'configs' && (
+          <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-4 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
             <div>
               <h2 className="text-sm font-bold text-slate-900">大模型路由网关列表</h2>
@@ -804,6 +806,7 @@ export const AdminPage: React.FC = () => {
           )}
         </div>
       )}
+      </div>
 
       {/* 弹窗：新增/编辑模型配置 */}
       {isConfigModalOpen &&

@@ -125,10 +125,10 @@ export const AuthPage: React.FC = () => {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-8 bg-slate-50/70">
-      <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6">
+      <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6 animate-scale-in">
         {/* 品牌标识 */}
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-xl bg-teal-600 text-white flex items-center justify-center mx-auto shadow-sm shadow-teal-600/20">
+          <div className="w-12 h-12 rounded-xl bg-teal-600 text-white flex items-center justify-center mx-auto shadow-sm shadow-teal-600/20 hover:scale-105 hover:rotate-3 transition-transform duration-200">
             <GraduationCap className="w-6 h-6" />
           </div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">一学期 OneTerm</h1>
@@ -137,13 +137,11 @@ export const AuthPage: React.FC = () => {
           </p>
         </div>
 
-
-
         {/* 错误提示 */}
         {errorMsg && (
           <div
             role="alert"
-            className={`p-3 rounded-lg border text-xs flex items-start gap-2 ${
+            className={`p-3 rounded-lg border text-xs flex items-start gap-2 animate-fade-slide-down ${
               isLockedError
                 ? 'bg-rose-50 border-rose-200 text-rose-800'
                 : 'bg-amber-50 border-amber-200 text-amber-800'
@@ -163,7 +161,7 @@ export const AuthPage: React.FC = () => {
 
         {/* 成功提示 */}
         {successMsg && (
-          <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
+          <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2 animate-fade-slide-down">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>{successMsg}</span>
           </div>

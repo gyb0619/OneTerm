@@ -78,15 +78,18 @@ export const AppLayout: React.FC = () => {
       <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80 transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           {/* Logo 与主标题 */}
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-teal-600 to-teal-500 flex items-center justify-center text-white shadow-sm shadow-teal-500/20">
+          <div
+            onClick={() => navigate('/calendar')}
+            className="flex items-center gap-3 shrink-0 group cursor-pointer hover:scale-[1.02] transition-transform duration-200"
+          >
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-teal-600 to-teal-500 flex items-center justify-center text-white shadow-sm shadow-teal-500/20 group-hover:rotate-6 group-hover:scale-105 transition-all duration-200">
               <GraduationCap className="w-5 h-5" />
             </div>
             <div className="flex items-baseline gap-2.5">
-              <span className="font-bold text-lg tracking-tight text-slate-900">
+              <span className="font-bold text-lg tracking-tight text-slate-900 group-hover:text-teal-700 transition-colors">
                 一学期 OneTerm
               </span>
-              <span className="hidden md:inline-block text-xs text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full font-medium border border-teal-100">
+              <span className="hidden md:inline-block text-xs text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full font-medium border border-teal-100 group-hover:border-teal-200 transition-colors">
                 一学期，一张图
               </span>
             </div>
@@ -101,14 +104,14 @@ export const AppLayout: React.FC = () => {
                   key={item.to}
                   to={item.to}
                   className={({ isActive }) =>
-                    `flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-sm font-medium transition-all duration-200 ease-out active:scale-95 ${
+                    `flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-sm font-medium transition-all duration-150 ease-out hover:-translate-y-0.5 active:scale-95 ${
                       isActive
                         ? 'bg-white text-teal-700 shadow-xs font-semibold'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                     }`
                   }
                 >
-                  <Icon className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
+                  <Icon className="w-4 h-4 transition-transform duration-200" />
                   {item.label}
                 </NavLink>
               );
@@ -118,7 +121,7 @@ export const AppLayout: React.FC = () => {
           {/* 状态与用户信息 */}
           <div className="flex items-center gap-2.5 text-xs sm:text-sm">
             {currentUser?.mockMode && (
-              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 text-amber-700 border border-amber-200/70 text-xs font-medium">
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 text-amber-700 border border-amber-200/70 text-xs font-medium hover:scale-105 transition-transform">
                 <Zap className="w-3.5 h-3.5 text-amber-500" />
                 Mock 模式
               </span>
@@ -126,7 +129,7 @@ export const AppLayout: React.FC = () => {
             {currentUser ? (
               <div className="flex items-center gap-2">
                 <div
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100/90 border border-slate-200/80 transition-all text-xs"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-white hover:border-teal-300 hover:shadow-xs border border-slate-200/80 transition-all duration-150 text-xs cursor-default"
                   title={`当日已消耗 ${currentUser.todayTokensUsed.toLocaleString()} / 上限 ${currentUser.dailyTokenLimit.toLocaleString()} Tokens`}
                 >
                   <div className="flex flex-col text-right sm:text-left">
@@ -138,7 +141,7 @@ export const AppLayout: React.FC = () => {
                       >
                         {currentUser.username}
                       </NavLink>
-                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-teal-100/80 text-teal-800 font-mono font-medium">
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-teal-100/80 text-teal-800 font-mono font-medium hover:scale-105 transition-transform">
                         {Math.min(
                           100,
                           Math.round(
@@ -163,7 +166,7 @@ export const AppLayout: React.FC = () => {
                       void refreshCurrentUser();
                     }}
                     disabled={isRefreshingQuota}
-                    className="p-1 rounded-lg text-slate-400 hover:text-teal-700 hover:bg-teal-50 transition-colors ml-0.5 disabled:opacity-50"
+                    className="p-1 rounded-lg text-slate-400 hover:text-teal-700 hover:bg-teal-50 transition-all duration-200 ml-0.5 disabled:opacity-50 hover:rotate-180 active:scale-90"
                     title="点击立即刷新 Token 额度"
                   >
                     <RefreshCw
@@ -177,7 +180,7 @@ export const AppLayout: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                  className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:scale-110 active:scale-90 transition-all duration-150"
                   title="退出登录"
                 >
                   <LogOut className="w-4 h-4" />
@@ -186,7 +189,7 @@ export const AppLayout: React.FC = () => {
             ) : (
               <NavLink
                 to="/login"
-                className="px-3.5 py-1.5 rounded-xl bg-teal-600 text-white font-medium hover:bg-teal-700 transition-colors shadow-sm text-sm"
+                className="px-3.5 py-1.5 rounded-xl bg-teal-600 text-white font-medium hover:bg-teal-700 hover:-translate-y-0.5 active:scale-95 transition-all shadow-sm text-sm"
               >
                 登录体验
               </NavLink>
@@ -203,9 +206,9 @@ export const AppLayout: React.FC = () => {
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${
+                  `flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-150 active:scale-95 ${
                     isActive
-                      ? 'bg-teal-600 text-white shadow-xs'
+                      ? 'bg-teal-600 text-white shadow-xs font-semibold'
                       : 'text-slate-600 hover:bg-slate-200/60'
                   }`
                 }

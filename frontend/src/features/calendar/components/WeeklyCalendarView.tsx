@@ -155,7 +155,10 @@ export const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
       </div>
 
       {/* 7 天周视图列 */}
-      <div className="grid grid-cols-1 md:grid-cols-7 divide-y md:divide-y-0 md:divide-x divide-slate-200 bg-white">
+      <div
+        key={currentWeekMonday}
+        className="grid grid-cols-1 md:grid-cols-7 divide-y md:divide-y-0 md:divide-x divide-slate-200 bg-white animate-fade-in"
+      >
         {weekDays.map((day) => {
           const dayEvents = eventsByDay[day.dateStr] || [];
           const dayReviews = reviewTopicsByDay[day.dateStr] || [];
