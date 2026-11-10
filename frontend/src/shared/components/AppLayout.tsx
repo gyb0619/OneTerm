@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { httpClient } from '../api/httpClient';
+import { ReminderCenter } from './ReminderCenter';
 
 export const AppLayout: React.FC = () => {
   const { currentUser, setCurrentUser, isRefreshingQuota, refreshCurrentUser } = useAppStore();
@@ -130,6 +131,7 @@ export const AppLayout: React.FC = () => {
                 Mock 模式
               </span>
             )}
+            {currentUser && <ReminderCenter />}
             {currentUser ? (
               <div className="flex items-center gap-2">
                 <div

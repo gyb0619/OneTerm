@@ -89,6 +89,10 @@ public final class IcsExporter {
                 sb.append("DESCRIPTION:").append(escapeIcsText(desc.toString())).append(CRLF);
             }
             sb.append("CATEGORIES:").append(escapeIcsText(typeLabel)).append(CRLF);
+
+            // 智能手机日历闹钟提醒（RFC 5545 VALARM）
+            appendAlarmsForEvent(sb, event.type(), event.title(), event.location());
+
             sb.append("END:VEVENT").append(CRLF);
         }
 
@@ -127,11 +131,54 @@ public final class IcsExporter {
             sb.append("DESCRIPTION:").append(escapeIcsText(desc.toString())).append(CRLF);
             sb.append("CATEGORIES:考前复习").append(CRLF);
             sb.append("STATUS:").append(topic.done() ? "COMPLETED" : "CONFIRMED").append(CRLF);
+
+            // 考前复习打卡提醒（提前 15 分钟）
+            appendAlarm(sb, "-PT15M", "考前复习打卡提醒：今晚复习「" + nullToEmpty(topic.topic()) + "」");
+
             sb.append("END:VEVENT").append(CRLF);
         }
 
         sb.append("END:VCALENDAR").append(CRLF);
         return sb.toString();
+    }
+
+    private static void appendAlarmsForEvent(StringBuilder sb, String type, String title, String location) {
+        String safeTitle = nullToEmpty(title);
+        String safeLoc = (location != null && !location.isBlank()) ? " 地点：" + location : "";
+        String normType = type != null ? type.trim().toLowerCase() : "";
+
+        switch (normType) {
+            case "exam" -> {
+                // 考试：提前 1 天 + 提前 2 小时响铃提醒
+                appendAlarm(sb, "-P1D", "【考试预警】明天进行 " + safeTitle + "，请做好准考证与文具准备！" + safeLoc);
+                appendAlarm(sb, "-PT2H", "【考试提醒】距离 " + safeTitle + " 开考仅剩 2 小时，请即刻前往考场！" + safeLoc);
+            }
+            case "deadline" -> {
+                // 大作业截止：提前 1 天 + 提前 3 小时提醒
+                appendAlarm(sb, "-P1D", "【作业截止预警】" + safeTitle + " 将于明天截止，请尽快完成并提交！");
+                appendAlarm(sb, "-PT3H", "【紧急截止提醒】" + safeTitle + " 距离最终截止仅剩 3 小时！");
+            }
+            case "course" -> {
+                // 课程：提前 15 分钟提醒
+                appendAlarm(sb, "-PT15M", "【上课提醒】15分钟后开始 " + safeTitle + "，请带齐教材前往教室！" + safeLoc);
+            }
+            case "activity" -> {
+                // 活动：提前 30 分钟提醒
+                appendAlarm(sb, "-PT30M", "【活动提醒】30分钟后开始 " + safeTitle + safeLoc);
+            }
+            default -> {
+                // 通用通知/日程：提前 15 分钟提醒
+                appendAlarm(sb, "-PT15M", "【日程提醒】" + safeTitle + safeLoc);
+            }
+        }
+    }
+
+    private static void appendAlarm(StringBuilder sb, String trigger, String description) {
+        sb.append("BEGIN:VALARM").append(CRLF);
+        sb.append("ACTION:DISPLAY").append(CRLF);
+        sb.append("DESCRIPTION:").append(escapeIcsText(description)).append(CRLF);
+        sb.append("TRIGGER:").append(trigger).append(CRLF);
+        sb.append("END:VALARM").append(CRLF);
     }
 
     private static String formatTypeLabel(String type) {

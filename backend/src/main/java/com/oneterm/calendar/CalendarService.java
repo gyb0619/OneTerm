@@ -2,6 +2,7 @@ package com.oneterm.calendar;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.oneterm.calendar.core.CalendarTimeUtils;
 import com.oneterm.calendar.core.ConflictDetector;
 import com.oneterm.calendar.core.IcsExporter;
 import com.oneterm.calendar.core.ReviewPathScheduler;
@@ -11,6 +12,8 @@ import com.oneterm.calendar.dto.CalendarEventDto;
 import com.oneterm.calendar.dto.CalendarOverviewResponse;
 import com.oneterm.calendar.dto.ConflictPairDto;
 import com.oneterm.calendar.dto.CreateReviewTopicRequest;
+import com.oneterm.calendar.dto.ReminderItemDto;
+import com.oneterm.calendar.dto.RemindersSummaryResponse;
 import com.oneterm.calendar.dto.ReviewTopicDto;
 import com.oneterm.calendar.dto.ScheduleReviewTopicsRequest;
 import com.oneterm.calendar.dto.SuggestCourseTopicsRequest;
@@ -27,7 +30,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -83,6 +90,268 @@ public class CalendarService {
                 summary.freestDay(),
                 summary.busiestDay(),
                 summary.busiestWeek()
+        );
+    }
+
+    /**
+     * 智能教务提醒中心：自动聚合今日日程、临期考试倒计时、临期截止、时间冲突预警与今日复习待办。
+     */
+    public RemindersSummaryResponse getReminders(String referenceDateRaw) {
+        long userId = currentUserProvider.requireCurrentUserId();
+        List<CalendarEventDto> events = calendarRepository.findEventsByUserId(userId);
+        List<ReviewTopicDto> reviewTopics = calendarRepository.findReviewTopicsByUserId(userId, null);
+        List<ConflictPairDto> conflicts = ConflictDetector.detectConflicts(events);
+
+        // 1. 确定参考基准日期
+        LocalDate todayShanghai = LocalDate.now(CalendarTimeUtils.SHANGHAI_ZONE);
+        LocalDate refDate = null;
+        if (referenceDateRaw != null && !referenceDateRaw.isBlank()) {
+            try {
+                refDate = LocalDate.parse(referenceDateRaw.trim());
+            } catch (Exception ignored) {
+            }
+        }
+        if (refDate == null) {
+            boolean hasTodayEvents = events.stream().anyMatch(e -> {
+                try {
+                    return CalendarTimeUtils.parseLocalDate(e.startTime()).equals(todayShanghai);
+                } catch (Exception ex) {
+                    return false;
+                }
+            });
+            if (hasTodayEvents) {
+                refDate = todayShanghai;
+            } else if (!events.isEmpty()) {
+                refDate = events.stream()
+                        .map(e -> CalendarTimeUtils.parseLocalDate(e.startTime()))
+                        .filter(d -> d.isEqual(LocalDate.of(2026, 11, 4)))
+                        .findFirst()
+                        .orElse(CalendarTimeUtils.parseLocalDate(events.get(0).startTime()));
+            } else {
+                refDate = todayShanghai;
+            }
+        }
+
+        final LocalDate effectiveRefDate = refDate;
+        String refDateStr = effectiveRefDate.toString();
+
+        // 2. 今日日程提醒
+        List<ReminderItemDto> todayEvents = new ArrayList<>();
+        for (CalendarEventDto e : events) {
+            try {
+                LocalDate eventDate = CalendarTimeUtils.parseLocalDate(e.startTime());
+                if (eventDate.equals(effectiveRefDate)) {
+                    ZonedDateTime startZdt = CalendarTimeUtils.parseShanghaiDateTime(e.startTime());
+                    ZonedDateTime endZdt = CalendarTimeUtils.parseShanghaiDateTime(e.endTime());
+                    String timeRange = String.format("%02d:%02d - %02d:%02d",
+                            startZdt.getHour(), startZdt.getMinute(),
+                            endZdt.getHour(), endZdt.getMinute());
+
+                    String urgency = "info";
+                    if ("exam".equalsIgnoreCase(e.type())) {
+                        urgency = "critical";
+                    } else if ("deadline".equalsIgnoreCase(e.type())) {
+                        urgency = "warning";
+                    }
+
+                    todayEvents.add(new ReminderItemDto(
+                            "event-" + e.id(),
+                            "today_" + (e.type() != null ? e.type().toLowerCase() : "event"),
+                            e.title(),
+                            e.courseName() != null && !e.courseName().isBlank() ? e.courseName() : (e.location() != null ? e.location() : ""),
+                            "今日 " + timeRange,
+                            e.location(),
+                            urgency,
+                            refDateStr,
+                            e.id(),
+                            null
+                    ));
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        // 3. 临期考试倒计时提醒
+        List<ReminderItemDto> upcomingExams = new ArrayList<>();
+        for (CalendarEventDto e : events) {
+            if ("exam".equalsIgnoreCase(e.type())) {
+                try {
+                    LocalDate examDate = CalendarTimeUtils.parseLocalDate(e.startTime());
+                    long daysDiff = ChronoUnit.DAYS.between(effectiveRefDate, examDate);
+                    ZonedDateTime startZdt = CalendarTimeUtils.parseShanghaiDateTime(e.startTime());
+                    String timeDisplay;
+                    String urgency;
+
+                    if (daysDiff < 0) {
+                        timeDisplay = "已结束 (" + examDate + ")";
+                        urgency = "info";
+                    } else if (daysDiff == 0) {
+                        timeDisplay = String.format("今天 %02d:%02d 开考 (急)", startZdt.getHour(), startZdt.getMinute());
+                        urgency = "critical";
+                    } else if (daysDiff == 1) {
+                        timeDisplay = String.format("明天 %02d:%02d 开考 (剩1天)", startZdt.getHour(), startZdt.getMinute());
+                        urgency = "critical";
+                    } else if (daysDiff <= 3) {
+                        timeDisplay = String.format("距开考仅剩 %d 天 (%02d-%02d %02d:%02d)",
+                                daysDiff, examDate.getMonthValue(), examDate.getDayOfMonth(), startZdt.getHour(), startZdt.getMinute());
+                        urgency = "critical";
+                    } else if (daysDiff <= 7) {
+                        timeDisplay = String.format("距开考还有 %d 天 (%02d-%02d %02d:%02d)",
+                                daysDiff, examDate.getMonthValue(), examDate.getDayOfMonth(), startZdt.getHour(), startZdt.getMinute());
+                        urgency = "warning";
+                    } else {
+                        timeDisplay = String.format("考期：%02d-%02d %02d:%02d (剩%d天)",
+                                examDate.getMonthValue(), examDate.getDayOfMonth(), startZdt.getHour(), startZdt.getMinute(), daysDiff);
+                        urgency = "info";
+                    }
+
+                    upcomingExams.add(new ReminderItemDto(
+                            "exam-" + e.id(),
+                            "upcoming_exam",
+                            e.title(),
+                            e.location() != null && !e.location().isBlank() ? "考场：" + e.location() : (e.courseName() != null ? e.courseName() : ""),
+                            timeDisplay,
+                            e.location(),
+                            urgency,
+                            examDate.toString(),
+                            e.id(),
+                            null
+                    ));
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        upcomingExams.sort(Comparator.comparing(ReminderItemDto::targetDate));
+
+        // 4. 临期大作业/实验报告截止提醒
+        List<ReminderItemDto> upcomingDeadlines = new ArrayList<>();
+        for (CalendarEventDto e : events) {
+            if ("deadline".equalsIgnoreCase(e.type())) {
+                try {
+                    LocalDate deadlineDate = CalendarTimeUtils.parseLocalDate(e.endTime());
+                    long daysDiff = ChronoUnit.DAYS.between(effectiveRefDate, deadlineDate);
+                    ZonedDateTime endZdt = CalendarTimeUtils.parseShanghaiDateTime(e.endTime());
+                    String timeDisplay;
+                    String urgency;
+
+                    if (daysDiff < 0) {
+                        timeDisplay = "已截止 (" + deadlineDate + ")";
+                        urgency = "info";
+                    } else if (daysDiff == 0) {
+                        timeDisplay = String.format("今天 %02d:%02d 截止提交 (紧急)", endZdt.getHour(), endZdt.getMinute());
+                        urgency = "critical";
+                    } else if (daysDiff == 1) {
+                        timeDisplay = String.format("明天 %02d:%02d 截止 (剩1天)", endZdt.getHour(), endZdt.getMinute());
+                        urgency = "critical";
+                    } else if (daysDiff <= 3) {
+                        timeDisplay = String.format("距截止还剩 %d 天 (%02d-%02d %02d:%02d)",
+                                daysDiff, deadlineDate.getMonthValue(), deadlineDate.getDayOfMonth(), endZdt.getHour(), endZdt.getMinute());
+                        urgency = "warning";
+                    } else {
+                        timeDisplay = String.format("截止时间：%02d-%02d %02d:%02d",
+                                deadlineDate.getMonthValue(), deadlineDate.getDayOfMonth(), endZdt.getHour(), endZdt.getMinute());
+                        urgency = "info";
+                    }
+
+                    upcomingDeadlines.add(new ReminderItemDto(
+                            "deadline-" + e.id(),
+                            "upcoming_deadline",
+                            e.title(),
+                            e.courseName() != null && !e.courseName().isBlank() ? "课程：" + e.courseName() : "重要大作业/实验",
+                            timeDisplay,
+                            e.location(),
+                            urgency,
+                            deadlineDate.toString(),
+                            e.id(),
+                            null
+                    ));
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        upcomingDeadlines.sort(Comparator.comparing(ReminderItemDto::targetDate));
+
+        // 5. 日程冲突预警提醒
+        List<ReminderItemDto> conflictAlerts = new ArrayList<>();
+        int conflictIdx = 0;
+        for (ConflictPairDto pair : conflicts) {
+            conflictIdx++;
+            String overlapStart = pair.overlapStart();
+            String overlapEnd = pair.overlapEnd();
+            String timeDisplay = "重叠时段：" + overlapStart + " ~ " + overlapEnd;
+            try {
+                ZonedDateTime st = CalendarTimeUtils.parseShanghaiDateTime(overlapStart);
+                ZonedDateTime et = CalendarTimeUtils.parseShanghaiDateTime(overlapEnd);
+                timeDisplay = String.format("冲突重叠：%02d-%02d %02d:%02d ~ %02d:%02d",
+                        st.getMonthValue(), st.getDayOfMonth(), st.getHour(), st.getMinute(),
+                        et.getHour(), et.getMinute());
+            } catch (Exception ignored) {
+            }
+
+            conflictAlerts.add(new ReminderItemDto(
+                    "conflict-" + pair.eventA().id() + "-" + pair.eventB().id(),
+                    "conflict",
+                    "时间冲突预警 (" + conflictIdx + ")",
+                    pair.eventA().title() + " 与 " + pair.eventB().title(),
+                    timeDisplay,
+                    null,
+                    "critical",
+                    refDateStr,
+                    pair.eventA().id(),
+                    null
+            ));
+        }
+
+        // 6. 今日考前复习待办打卡提醒
+        List<ReminderItemDto> todayReviewTopics = new ArrayList<>();
+        for (ReviewTopicDto rt : reviewTopics) {
+            if (rt.plannedDate() != null && rt.plannedDate().equals(refDateStr)) {
+                String coursePrefix = rt.courseName() != null && !rt.courseName().isBlank()
+                        ? "《" + rt.courseName() + "》"
+                        : (rt.eventTitle() != null ? rt.eventTitle() : "");
+                String urgency = rt.done() ? "info" : "warning";
+                todayReviewTopics.add(new ReminderItemDto(
+                        "review-" + rt.id(),
+                        "today_review",
+                        rt.topic(),
+                        coursePrefix + (rt.done() ? " · 已打卡完成" : " · 待打卡复习"),
+                        rt.done() ? "今日打卡已完成" : "计划今晚 20:00 复习",
+                        null,
+                        urgency,
+                        refDateStr,
+                        rt.eventId(),
+                        rt.id()
+                ));
+            }
+        }
+
+        int totalCount = todayEvents.size() + upcomingExams.size() + upcomingDeadlines.size() + conflictAlerts.size() + todayReviewTopics.size();
+        int urgentCount = 0;
+        for (ReminderItemDto item : todayEvents) {
+            if ("critical".equals(item.urgencyLevel()) || "warning".equals(item.urgencyLevel())) urgentCount++;
+        }
+        for (ReminderItemDto item : upcomingExams) {
+            if ("critical".equals(item.urgencyLevel()) || "warning".equals(item.urgencyLevel())) urgentCount++;
+        }
+        for (ReminderItemDto item : upcomingDeadlines) {
+            if ("critical".equals(item.urgencyLevel()) || "warning".equals(item.urgencyLevel())) urgentCount++;
+        }
+        for (ReminderItemDto item : conflictAlerts) {
+            if ("critical".equals(item.urgencyLevel()) || "warning".equals(item.urgencyLevel())) urgentCount++;
+        }
+        for (ReminderItemDto item : todayReviewTopics) {
+            if ("critical".equals(item.urgencyLevel()) || "warning".equals(item.urgencyLevel())) urgentCount++;
+        }
+
+        return new RemindersSummaryResponse(
+                totalCount,
+                urgentCount,
+                refDateStr,
+                todayEvents,
+                upcomingExams,
+                upcomingDeadlines,
+                conflictAlerts,
+                todayReviewTopics
         );
     }
 

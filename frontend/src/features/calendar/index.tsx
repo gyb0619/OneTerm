@@ -40,6 +40,7 @@ import {
 import { WeeklyCalendarView } from './components/WeeklyCalendarView';
 import { SemesterWorkloadCharts } from './components/SemesterWorkloadCharts';
 import { ReviewPathPanel } from './components/ReviewPathPanel';
+import { CalendarReminderBanner } from './components/CalendarReminderBanner';
 
 type CalendarTab = 'weekly' | 'workload' | 'review';
 
@@ -230,7 +231,7 @@ export const CalendarPage: React.FC = () => {
     setExporting(true);
     try {
       await calendarApi.downloadIcsFile();
-      showToast('已导出 oneterm-calendar.ics，可直接导入手机或系统日历');
+      showToast('已导出 oneterm-calendar.ics（内置 VALARM 手机日历闹钟，考前/课前自动在手机响铃提醒）');
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : '导出 .ics 日历失败');
     } finally {
@@ -262,6 +263,9 @@ export const CalendarPage: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      {/* 智能教务提醒体系横幅：临期考试倒计时、作业截止、冲突预警 */}
+      <CalendarReminderBanner onSelectEvent={(id) => setHighlightedEventId(id)} />
+
       {/* 顶部现代化操作条：精简分段选项卡与周次切换 */}
       <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
         {/* 视图选项卡 */}
@@ -358,16 +362,19 @@ export const CalendarPage: React.FC = () => {
             </button>
           )}
 
-          {/* 导出日历 */}
+          {/* 导出日历（含 VALARM 手机系统闹钟） */}
           <button
             type="button"
             disabled={exporting || hasNoEvents}
             onClick={handleExportIcs}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-600 text-white font-medium hover:bg-teal-700 transition-colors shadow-sm disabled:opacity-50"
-            title="导出 RFC 5545 标准 .ics 日历文件"
+            title="导出 RFC 5545 标准 .ics 日历文件（内置手机系统闹钟 VALARM，导入手机后课前/考前自动响铃）"
           >
             <Download className="w-3.5 h-3.5" />
             <span>.ics 导出</span>
+            <span className="text-[10px] bg-teal-500/80 px-1 py-0.2 rounded font-mono hidden sm:inline">
+              🔔带闹钟
+            </span>
           </button>
 
           <button

@@ -127,7 +127,7 @@ class CalendarServiceTest {
         assertNotNull(overview.busiestDay());
         assertNotNull(overview.busiestWeek());
 
-        // 5. 导出标准 .ics 文件
+        // 5. 导出标准 .ics 文件（含 RFC 5545 闹钟提醒）
         ResponseEntity<String> icsResp = calendarController.exportIcs();
         String ics = icsResp.getBody();
         assertNotNull(ics);
@@ -135,6 +135,10 @@ class CalendarServiceTest {
         assertTrue(ics.contains("X-WR-TIMEZONE:Asia/Shanghai"));
         assertTrue(ics.contains("SUMMARY:[考试] 计算机网络期末考试"));
         assertTrue(ics.contains("SUMMARY:[考前复习] 《计算机网络》TCP 三次握手与四次挥手"));
+        assertTrue(ics.contains("BEGIN:VALARM"));
+        assertTrue(ics.contains("TRIGGER:-P1D"));
+        assertTrue(ics.contains("TRIGGER:-PT15M"));
+        assertTrue(ics.contains("ACTION:DISPLAY"));
         assertTrue(ics.contains("END:VCALENDAR"));
 
         // 6. 删除复习知识点
@@ -221,6 +225,13 @@ class CalendarServiceTest {
         assertTrue(batchCreated.size() >= 3);
         // 验证自动生成了计划复习日期且早于考试日期 2026-11-13
         assertTrue(batchCreated.stream().allMatch(t -> t.plannedDate() != null && t.plannedDate().compareTo("2026-11-13") < 0));
+
+        // 3. 验证智能日程提醒接口
+        com.oneterm.calendar.dto.RemindersSummaryResponse reminders =
+                calendarController.getReminders("2026-11-10").getBody();
+        assertNotNull(reminders);
+        assertTrue(reminders.totalCount() > 0);
+        assertTrue(reminders.upcomingExams().stream().anyMatch(e -> e.title().contains("计算机网络")));
     }
 
     private static Path resolveMigrationPath() {

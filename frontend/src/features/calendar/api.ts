@@ -2,6 +2,7 @@ import { httpClient } from '../../shared/api/httpClient';
 import type {
   CalendarOverviewResponse,
   ConflictPairDto,
+  RemindersSummaryResponse,
   ReviewTopicDto,
   UserProfileResponse,
 } from '../../shared/types/api';
@@ -47,6 +48,11 @@ export const calendarApi = {
   },
 
   getConflicts: () => httpClient.get<ConflictPairDto[]>('/api/calendar/conflicts'),
+
+  getReminders: (referenceDate?: string) => {
+    const query = referenceDate ? `?referenceDate=${encodeURIComponent(referenceDate)}` : '';
+    return httpClient.get<RemindersSummaryResponse>(`/api/calendar/reminders${query}`);
+  },
 
   getReviewTopics: (eventId?: number) => {
     const query = eventId !== undefined ? `?eventId=${eventId}` : '';

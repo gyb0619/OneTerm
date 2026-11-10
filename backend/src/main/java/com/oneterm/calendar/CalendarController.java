@@ -4,6 +4,7 @@ import com.oneterm.calendar.dto.BatchCreateReviewTopicsRequest;
 import com.oneterm.calendar.dto.CalendarOverviewResponse;
 import com.oneterm.calendar.dto.ConflictPairDto;
 import com.oneterm.calendar.dto.CreateReviewTopicRequest;
+import com.oneterm.calendar.dto.RemindersSummaryResponse;
 import com.oneterm.calendar.dto.ReviewTopicDto;
 import com.oneterm.calendar.dto.ScheduleReviewTopicsRequest;
 import com.oneterm.calendar.dto.SuggestCourseTopicsRequest;
@@ -50,6 +51,13 @@ public class CalendarController {
             @RequestParam(name = "semesterEnd", required = false) String semesterEnd
     ) {
         return ResponseEntity.ok(calendarService.getOverview(semesterStart, semesterEnd));
+    }
+
+    @GetMapping("/reminders")
+    public ResponseEntity<RemindersSummaryResponse> getReminders(
+            @RequestParam(name = "referenceDate", required = false) String referenceDate
+    ) {
+        return ResponseEntity.ok(calendarService.getReminders(referenceDate));
     }
 
     @GetMapping("/conflicts")

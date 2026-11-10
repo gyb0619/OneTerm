@@ -88,6 +88,30 @@ export interface CalendarOverviewResponse {
   busiestWeek?: WeeklyDensityItemDto | null;
 }
 
+export interface ReminderItemDto {
+  id: string;
+  type: string;
+  title: string;
+  subtitle: string;
+  timeDisplay: string;
+  location?: string;
+  urgencyLevel: 'critical' | 'warning' | 'info';
+  targetDate: string;
+  relatedEventId?: number;
+  relatedTopicId?: number;
+}
+
+export interface RemindersSummaryResponse {
+  totalCount: number;
+  urgentCount: number;
+  referenceDate: string;
+  todayEvents: ReminderItemDto[];
+  upcomingExams: ReminderItemDto[];
+  upcomingDeadlines: ReminderItemDto[];
+  conflictAlerts: ReminderItemDto[];
+  todayReviewTopics: ReminderItemDto[];
+}
+
 export interface QaCitationDto {
   chunkId: number;
   eventId: number;

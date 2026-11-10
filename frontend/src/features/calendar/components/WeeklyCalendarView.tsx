@@ -11,6 +11,7 @@ import {
   AlertCircle,
   FileText,
   X,
+  Bell,
 } from 'lucide-react';
 import type {
   ConflictPairDto,
@@ -243,12 +244,23 @@ export const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
                         </div>
                       )}
 
-                      {isConflicting && (
-                        <div className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-red-700 bg-red-100/90 px-2 py-0.5 rounded-md">
-                          <AlertCircle className="w-3.5 h-3.5" />
-                          时间冲突
-                        </div>
-                      )}
+                      {/* 智能提醒策略与冲突标记 */}
+                      <div className="mt-2 flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-900/10">
+                        <span className="inline-flex items-center gap-1 text-[10px] opacity-75 font-mono">
+                          <Bell className="w-2.5 h-2.5 text-teal-600" />
+                          {ev.type === 'exam'
+                            ? '提前1天+2h'
+                            : ev.type === 'deadline'
+                            ? '提前1天+3h'
+                            : '提前15m'}
+                        </span>
+                        {isConflicting && (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-rose-700 bg-rose-100/90 px-1.5 py-0.2 rounded">
+                            <AlertCircle className="w-2.5 h-2.5" />
+                            冲突
+                          </span>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -350,6 +362,19 @@ export const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
                 </div>
               </div>
             )}
+            <div className="text-xs text-slate-700 bg-white/90 border border-slate-200 rounded-lg p-2.5 flex items-start gap-2">
+              <Bell className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold text-slate-800">智能教务提醒策略：</span>
+                <span className="text-slate-600">
+                  {inspectingEvent.type === 'exam'
+                    ? '已配置多级预警：考前 1 天与考前 2 小时自动触发 RFC 5545 手机日历本地闹钟 (VALARM) 及 Web 桌面通知'
+                    : inspectingEvent.type === 'deadline'
+                    ? '已配置截止预警：截止前 1 天与前 3 小时自动触发本地闹钟 (VALARM) 及桌面通知'
+                    : '已配置上课提醒：开始前 15 分钟自动响铃提醒 (VALARM)'}
+                </span>
+              </div>
+            </div>
           </div>
           <button
             type="button"

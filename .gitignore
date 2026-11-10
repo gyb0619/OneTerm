@@ -47,6 +47,6 @@ docx/
 data
 
 # Standalone release & Source code bundles
-OneTerm/
-项目源代码/
+/OneTerm/
+/项目源代码/
 backend/src/main/resources/static/
